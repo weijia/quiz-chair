@@ -298,6 +298,8 @@ body.shaking { animation: shake 0.5s ease-in-out; }
 .mode-btn.quiz-mode:hover { box-shadow: 0 0 30px rgba(0,255,65,0.5); }
 .mode-btn.score-mode { background: var(--gold); box-shadow: 0 0 20px rgba(255,215,0,0.3); }
 .mode-btn.score-mode:hover { box-shadow: 0 0 30px rgba(255,215,0,0.5); }
+.mode-btn.blind-mode { background: #e040fb; color: var(--bg-dark); box-shadow: 0 0 20px rgba(224,64,251,0.3); }
+.mode-btn.blind-mode:hover { box-shadow: 0 0 30px rgba(224,64,251,0.5); }
 
 /* 底部链接按钮 */
 .start-links { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 360px; }
@@ -499,6 +501,11 @@ textarea:focus { border-color: var(--crt-green) !important; }
       <span class="mode-icon">🎯 记分模式</span>
       自由判定对错，只做特效
       <span class="mode-desc">适合老师/主持自己出题，按按钮执行惩罚</span>
+    </button>
+    <button class="mode-btn blind-mode" id="blindModeBtn">
+      <span class="mode-icon">🙈 盲答模式</span>
+      答错不显示正确答案
+      <span class="mode-desc">答错直接电，不揭晓答案！更具挑战性</span>
     </button>
   </div>
   <div class="start-links">
@@ -784,6 +791,7 @@ const state = {
   punishments: 0, correctCount: 0, totalCount: 0,
   timer: null, timeLeft: 15, isAnswered: false, isProcessing: false,
   isPaused: false,             // 是否暂停中
+  hideAnswer: false,          // 盲答模式：答错不显示正确答案
   questions: [...BUILT_IN_QUESTIONS], // 当前使用的题库
   quizBankTitle: '默认题库',           // 当前题库名称（用于历史记录）
   currentQuizBankId: null,              // 当前题库在 PouchDB 中的 _id（用于历史记录重玩）
@@ -797,6 +805,7 @@ const dom = {
   endStats: document.getElementById('endStats'),
   quizModeBtn: document.getElementById('quizModeBtn'),
   scoreModeBtn: document.getElementById('scoreModeBtn'),
+  blindModeBtn: document.getElementById('blindModeBtn'),
   restartBtn: document.getElementById('restartBtn'),
   importBtn: document.getElementById('importBtn'),
   historyBtn: document.getElementById('historyBtn'),
@@ -931,7 +940,7 @@ function showQuizUI() {
   dom.timerSection.style.display = ''; dom.questionSection.style.display = '';
   dom.optionsSection.style.display = ''; dom.scoreModeArea.style.display = 'none';
   dom.middleLabel.textContent = '当前题号'; dom.middleValue.textContent = '-';
-  dom.modeSubtitle.textContent = '— 经典桥段复刻 —';
+  dom.modeSubtitle.textContent = state.hideAnswer ? '— 盲答模式 · 答错不揭晓 —' : '— 经典桥段复刻 —';
   dom.pauseBtn.style.display = '';
 }
 function showScoreUI() {
@@ -980,7 +989,9 @@ function handleAnswer(idx) {
     btns[q.answer].classList.add('correct'); state.isProcessing = true;
     triggerCorrectEffect(); setTimeout(() => { state.isProcessing = false; nextQuestion(); }, 2000);
   } else {
-    btns[idx].classList.add('wrong'); btns[q.answer].classList.add('correct'); state.isProcessing = true;
+    btns[idx].classList.add('wrong');
+    if (!state.hideAnswer) btns[q.answer].classList.add('correct'); // 盲答模式不显示正确答案
+    state.isProcessing = true;
     triggerWrongEffect(); setTimeout(() => { state.isProcessing = false; nextQuestion(); }, 2500);
   }
 }
@@ -990,7 +1001,7 @@ function handleTimeout() {
   state.isAnswered = true; AudioSystem.playTimeout();
   const btns = dom.optionsSection.querySelectorAll('.option-btn');
   btns.forEach(b => b.disabled = true);
-  btns[state.questions[state.currentQuestion].answer].classList.add('correct');
+  if (!state.hideAnswer) btns[state.questions[state.currentQuestion].answer].classList.add('correct');
   state.streak = 0; state.punishments++; state.totalCount++;
   dom.streakValue.textContent = state.streak; dom.punishValue.textContent = state.punishments; pulsePunish();
   triggerShake(); triggerScreenRed(); triggerLightning(); chairGlowRed();
@@ -1003,11 +1014,12 @@ function nextQuestion() {
   if (state.currentQuestion >= state.totalQuestions) endGame(); else loadQuestion();
 }
 
-function startQuizMode(questions, title, bankId) {
+function startQuizMode(questions, title, bankId, hideAnswer) {
   AudioSystem.init();
   state.mode = 'quiz'; state.questions = questions || [...BUILT_IN_QUESTIONS];
   state.quizBankTitle = title || '默认题库';
   state.currentQuizBankId = bankId || null;
+  state.hideAnswer = !!hideAnswer;
   state.totalQuestions = state.questions.length;
   state.currentQuestion = 0; state.streak = 0; state.maxStreak = 0;
   state.punishments = 0; state.correctCount = 0; state.totalCount = 0;
@@ -1036,6 +1048,7 @@ async function endGame() {
   await saveHistory({
     mode: 'quiz', quizBankTitle: state.quizBankTitle,
     quizBankId: state.currentQuizBankId || null,
+    hideAnswer: state.hideAnswer,
     totalQuestions: state.totalQuestions, correctCount: state.correctCount,
     punishments: state.punishments, maxStreak: state.maxStreak, accuracy: accuracy
   });
@@ -1321,7 +1334,7 @@ async function openHistoryModal() {
         <span>最高连对: ${r.maxStreak}</span>
       </div>
       <div class="h-time">${new Date(r.playedAt).toLocaleString('zh-CN')}</div>
-      ${r.mode === 'quiz' && r.quizBankId ? `<button class="start-link-btn history-replay" data-idx="${idx}" data-bank-id="${r.quizBankId}" style="margin-top:8px;width:auto;display:inline-block;padding:6px 16px;font-size:0.85rem;">🔄 再来一次</button>` : ''}
+      ${r.mode === 'quiz' && r.quizBankId ? `<button class="start-link-btn history-replay" data-idx="${idx}" data-bank-id="${r.quizBankId}" data-hide-answer="${!!r.hideAnswer}" style="margin-top:8px;width:auto;display:inline-block;padding:6px 16px;font-size:0.85rem;">🔄 再来一次</button>` : ''}
     </div>
   `).join('') + '<button class="history-clear" id="clearHistBtn">清除所有记录</button>';
 
@@ -1332,7 +1345,7 @@ async function openHistoryModal() {
       try {
         const bank = await db.get(bankId);
         closeHistoryModal();
-        startQuizMode(bank.questions, bank.title + ' (' + bank.questionCount + '题)', bank._id);
+        startQuizMode(bank.questions, bank.title + ' (' + bank.questionCount + '题)', bank._id, btn.dataset.hideAnswer === 'true');
       } catch (e) {
         showFeedback('题库已被删除，无法重玩', 'wrong', 1500);
       }
@@ -1388,6 +1401,7 @@ document.addEventListener('webkitfullscreenchange', () => {
 /* ==================== 事件绑定 ==================== */
 dom.quizModeBtn.addEventListener('click', () => startQuizMode(null, null));
 dom.scoreModeBtn.addEventListener('click', startScoreMode);
+dom.blindModeBtn.addEventListener('click', () => startQuizMode(null, null, null, true));
 dom.restartBtn.addEventListener('click', () => startQuizMode(null, null));
 dom.judgeCorrectBtn.addEventListener('click', judgeCorrect);
 dom.judgeWrongBtn.addEventListener('click', judgeWrong);
