@@ -551,6 +551,22 @@ body.shaking { animation: shake 0.5s ease-in-out; }
   background: rgba(255,255,255,0.15);
 }
 
+/* 模式选择弹窗 - 倒计时设置 */
+.timer-setting {
+  margin: 12px 0; padding: 10px 14px; border-radius: 8px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.timer-setting label { font-size: 0.9rem; color: var(--text-white); }
+.timer-setting input[type="number"] {
+  width: 60px; padding: 6px 8px; font-size: 1rem; font-family: var(--font-main);
+  color: var(--text-white); background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2); border-radius: 6px;
+  text-align: center; outline: none;
+}
+.timer-setting input[type="number"]:focus { border-color: var(--crt-green); }
+.timer-setting span { font-size: 0.85rem; color: rgba(255,255,255,0.5); }
+
 /* 返回首页按钮 */
 .home-btn {
   position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 9995;
@@ -629,6 +645,11 @@ body.shaking { animation: shake 0.5s ease-in-out; }
 <div class="mode-select-overlay" id="modeSelectOverlay">
   <h3>选择答题模式</h3>
   <div class="bank-name" id="modeSelectBankName"></div>
+  <div class="timer-setting">
+    <label for="timerInput">⏱ 倒计时：</label>
+    <input type="number" id="timerInput" value="25" min="5" max="120" step="1">
+    <span>秒</span>
+  </div>
   <div class="mode-select-buttons">
     <button class="btn-normal" id="modeSelectNormal">📝 普通模式（答错揭晓答案）</button>
     <button class="btn-blind" id="modeSelectBlind">🙈 盲答模式（答错不揭晓）</button>
@@ -906,8 +927,9 @@ const BUILT_IN_QUESTIONS = [
 const state = {
   mode: null, currentQuestion: 0, streak: 0, maxStreak: 0,
   punishments: 0, correctCount: 0, totalCount: 0,
-  timer: null, timeLeft: 15, isAnswered: false, isProcessing: false,
+  timer: null, timeLeft: 25, isAnswered: false, isProcessing: false,
   isPaused: false,
+  timerDuration: 25,         // 倒计时时长（秒），默认25，可配置
   hideAnswer: false,          // 盲答模式：答错不显示正确答案
   questions: [...BUILT_IN_QUESTIONS], // 当前使用的题库
   quizBankTitle: '默认题库',           // 当前题库名称（用于历史记录）
@@ -1081,7 +1103,8 @@ function showScoreUI() {
 
 /* ==================== 倒计时 ==================== */
 function startTimer() {
-  state.timeLeft = 15; dom.timerValue.textContent = state.timeLeft; dom.timerValue.classList.remove('urgent');
+  state.timeLeft = state.timerDuration;
+  dom.timerValue.textContent = state.timeLeft; dom.timerValue.classList.remove('urgent');
   state.isPaused = false;
   state.timer = setInterval(() => {
     if (state.isPaused) return;
@@ -1115,12 +1138,14 @@ function handleAnswer(idx) {
   btns.forEach(b => b.disabled = true);
   if (idx === q.answer) {
     btns[q.answer].classList.add('correct'); state.isProcessing = true;
-    triggerCorrectEffect(); setTimeout(() => { state.isProcessing = false; nextQuestion(); }, 2000);
+    triggerCorrectEffect();
+    showNextButton();
   } else {
     btns[idx].classList.add('wrong');
     if (!state.hideAnswer) btns[q.answer].classList.add('correct');
     state.isProcessing = true;
-    triggerWrongEffect(); setTimeout(() => { state.isProcessing = false; nextQuestion(); }, 2500);
+    triggerWrongEffect();
+    showNextButton();
   }
 }
 
@@ -1134,20 +1159,40 @@ function handleTimeout() {
   dom.streakValue.textContent = state.streak; dom.punishValue.textContent = state.punishments; pulsePunish();
   triggerShake(); triggerScreenRed(); triggerLightning(); chairGlowRed();
   showFeedback('时间到！电佢！', 'wrong');
-  state.isProcessing = true; setTimeout(() => { state.isProcessing = false; nextQuestion(); }, 2500);
+  state.isProcessing = true; showNextButton();
+}
+
+function showNextButton() {
+  // 移除已有的下一题按钮
+  const existing = document.getElementById('nextQuestionBtn');
+  if (existing) existing.remove();
+
+  const btn = document.createElement('button');
+  btn.id = 'nextQuestionBtn';
+  btn.className = 'option-btn';
+  btn.style.cssText = 'margin-top:8px; background: linear-gradient(135deg, rgba(0,255,65,0.2), rgba(0,255,65,0.1)); border-color: var(--crt-green); color: var(--crt-green); font-weight: 700;';
+  btn.innerHTML = '<span class="option-letter" style="background:rgba(0,255,65,0.2);color:var(--crt-green);">▶</span>下一题';
+  btn.addEventListener('click', () => {
+    state.isProcessing = false;
+    nextQuestion();
+  });
+  dom.optionsSection.appendChild(btn);
 }
 
 function nextQuestion() {
+  const existing = document.getElementById('nextQuestionBtn');
+  if (existing) existing.remove();
   state.currentQuestion++;
   if (state.currentQuestion >= state.totalQuestions) endGame(); else loadQuestion();
 }
 
-function startQuizMode(questions, title, bankId, hideAnswer) {
+function startQuizMode(questions, title, bankId, hideAnswer, duration) {
   AudioSystem.init();
   state.mode = 'quiz'; state.questions = questions || [...BUILT_IN_QUESTIONS];
   state.quizBankTitle = title || '默认题库';
   state.currentQuizBankId = bankId || null;
   state.hideAnswer = !!hideAnswer;
+  state.timerDuration = duration || 25;
   state.totalQuestions = state.questions.length;
   state.currentQuestion = 0; state.streak = 0; state.maxStreak = 0;
   state.punishments = 0; state.correctCount = 0; state.totalCount = 0;
@@ -1176,6 +1221,7 @@ async function endGame() {
     mode: 'quiz', quizBankTitle: state.quizBankTitle,
     quizBankId: state.currentQuizBankId || null,
     hideAnswer: state.hideAnswer,
+    timerDuration: state.timerDuration,
     totalQuestions: state.totalQuestions, correctCount: state.correctCount,
     punishments: state.punishments, maxStreak: state.maxStreak, accuracy: accuracy
   });
@@ -1234,12 +1280,14 @@ function closeModeSelect() {
 
 dom.modeSelectNormal.addEventListener('click', () => {
   if (!pendingBank) return;
-  startQuizMode(pendingBank.questions, pendingBank.title + ' (' + pendingBank.questionCount + '题)', pendingBank._id, false);
+  const duration = parseInt(document.getElementById('timerInput').value) || 25;
+  startQuizMode(pendingBank.questions, pendingBank.title + ' (' + pendingBank.questionCount + '题)', pendingBank._id, false, duration);
 });
 
 dom.modeSelectBlind.addEventListener('click', () => {
   if (!pendingBank) return;
-  startQuizMode(pendingBank.questions, pendingBank.title + ' (' + pendingBank.questionCount + '题)', pendingBank._id, true);
+  const duration = parseInt(document.getElementById('timerInput').value) || 25;
+  startQuizMode(pendingBank.questions, pendingBank.title + ' (' + pendingBank.questionCount + '题)', pendingBank._id, true, duration);
 });
 
 dom.modeSelectCancel.addEventListener('click', closeModeSelect);
@@ -1484,7 +1532,7 @@ async function openHistoryModal() {
         <span>最高连对: ${r.maxStreak}</span>
       </div>
       <div class="h-time">${new Date(r.playedAt).toLocaleString('zh-CN')}</div>
-      ${r.mode === 'quiz' && r.quizBankId ? `<button class="start-link-btn history-replay" data-idx="${idx}" data-bank-id="${r.quizBankId}" data-hide-answer="${!!r.hideAnswer}" style="margin-top:8px;width:auto;display:inline-block;padding:6px 16px;font-size:0.85rem;">🔄 再来一次</button>` : ''}
+      ${r.mode === 'quiz' && r.quizBankId ? `<button class="start-link-btn history-replay" data-idx="${idx}" data-bank-id="${r.quizBankId}" data-hide-answer="${!!r.hideAnswer}" data-timer="${r.timerDuration || 25}" style="margin-top:8px;width:auto;display:inline-block;padding:6px 16px;font-size:0.85rem;">🔄 再来一次</button>` : ''}
     </div>
   `).join('') + '<button class="history-clear" id="clearHistBtn">清除所有记录</button>';
 
@@ -1494,7 +1542,8 @@ async function openHistoryModal() {
       try {
         const bank = await db.get(bankId);
         closeHistoryModal();
-        startQuizMode(bank.questions, bank.title + ' (' + bank.questionCount + '题)', bank._id, btn.dataset.hideAnswer === 'true');
+        const timer = parseInt(btn.dataset.timer) || 25;
+        startQuizMode(bank.questions, bank.title + ' (' + bank.questionCount + '题)', bank._id, btn.dataset.hideAnswer === 'true', timer);
       } catch (e) {
         showFeedback('题库已被删除，无法重玩', 'wrong', 1500);
       }
@@ -1555,6 +1604,7 @@ function goHome() {
       mode: 'quiz', quizBankTitle: state.quizBankTitle + '（中途退出）',
       quizBankId: state.currentQuizBankId || null,
       hideAnswer: state.hideAnswer,
+      timerDuration: state.timerDuration,
       totalQuestions: state.currentQuestion, correctCount: state.correctCount,
       punishments: state.punishments, maxStreak: state.maxStreak, accuracy: accuracy
     });
