@@ -515,9 +515,9 @@ body.shaking { animation: shake 0.5s ease-in-out; }
 }
 .pause-btn:hover { background: rgba(255,255,255,0.15); border-color: var(--crt-green); color: var(--crt-green); }
 
-/* 全屏按钮 */
+/* 全屏按钮 - z-index 必须高于所有覆盖层 */
 .fullscreen-btn {
-  position: fixed; top: 12px; left: 12px; z-index: 9995;
+  position: fixed; top: 12px; left: 12px; z-index: 10004;
   padding: 6px 14px; font-size: 0.85rem; font-family: var(--font-main); font-weight: 600;
   color: var(--text-white); background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);
   border-radius: 6px; cursor: pointer; transition: all 0.2s;
