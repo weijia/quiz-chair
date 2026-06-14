@@ -49,7 +49,8 @@ jobs:
 
           # 将版本信息注入到 window.__VERSION__ 变量
           VERSION_STRING="${VERSION} (${COMMIT_SHA}) | ${BUILD_TIME}"
-          sed -i "s|versionEl.textContent = 'dev';|versionEl.textContent = '${VERSION_STRING}';|" index.html
+          # 使用 # 作为 sed 分隔符，避免与版本号中的特殊字符冲突
+          sed -i "s#versionEl.textContent = 'dev';#versionEl.textContent = '${VERSION_STRING}';#" index.html
 
           echo "✅ Version injected: ${VERSION_STRING}"
 
