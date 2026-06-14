@@ -7,6 +7,8 @@
 <!-- ============================================================
      逃学威龙 · 答题惩罚椅
      复刻电影经典桥段的 Web 小游戏
+     模式一：答题模式 - 内置题库，限时答题
+     模式二：记分模式 - 自由判定对错，只做奖励/惩罚特效
      ============================================================ -->
 <style>
 /* ==================== 全局重置 & 基础样式 ==================== */
@@ -348,6 +350,90 @@ body.shaking {
   box-shadow: 0 0 20px rgba(255,26,26,0.3);
 }
 
+/* ==================== 记分模式 - 判定按钮 ==================== */
+.score-mode-buttons {
+  width: 100%;
+  display: flex;
+  gap: 16px;
+}
+
+.score-judge-btn {
+  flex: 1;
+  padding: 24px 16px;
+  font-size: clamp(1.3rem, 5vw, 2rem);
+  font-family: var(--font-main);
+  font-weight: 900;
+  border: 3px solid;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.score-judge-btn:active {
+  transform: scale(0.95);
+}
+
+/* 正确按钮 - 绿色 */
+.score-judge-btn.correct-btn {
+  color: #fff;
+  background: linear-gradient(135deg, #0a4a0a, #1a6a1a);
+  border-color: var(--crt-green);
+  box-shadow: 0 0 20px rgba(0,255,65,0.2), inset 0 0 30px rgba(0,255,65,0.1);
+}
+
+.score-judge-btn.correct-btn:hover {
+  box-shadow: 0 0 30px rgba(0,255,65,0.4), inset 0 0 40px rgba(0,255,65,0.15);
+  transform: translateY(-2px);
+}
+
+/* 错误按钮 - 红色 */
+.score-judge-btn.wrong-btn {
+  color: #fff;
+  background: linear-gradient(135deg, #4a0a0a, #6a1a1a);
+  border-color: var(--danger-red);
+  box-shadow: 0 0 20px rgba(255,26,26,0.2), inset 0 0 30px rgba(255,26,26,0.1);
+}
+
+.score-judge-btn.wrong-btn:hover {
+  box-shadow: 0 0 30px rgba(255,26,26,0.4), inset 0 0 40px rgba(255,26,26,0.15);
+  transform: translateY(-2px);
+}
+
+/* 重置按钮 */
+.reset-btn {
+  margin-top: 8px;
+  padding: 10px 32px;
+  font-size: clamp(0.85rem, 3vw, 1rem);
+  font-family: var(--font-main);
+  font-weight: 600;
+  color: rgba(255,255,255,0.6);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reset-btn:hover {
+  color: var(--text-white);
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.3);
+}
+
+/* 记分模式提示文字 */
+.score-mode-hint {
+  font-size: clamp(0.8rem, 2.5vw, 0.95rem);
+  color: rgba(255,255,255,0.4);
+  text-align: center;
+  line-height: 1.6;
+}
+
 /* ==================== 反馈文案弹出 ==================== */
 .feedback-popup {
   position: fixed;
@@ -490,7 +576,7 @@ body.shaking {
 .screen-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.9);
+  background: rgba(0,0,0,0.92);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -515,29 +601,68 @@ body.shaking {
   font-size: clamp(0.9rem, 3vw, 1.1rem);
   color: var(--text-yellow);
   margin-bottom: 8px;
-  max-width: 400px;
+  max-width: 420px;
   text-align: center;
   line-height: 1.6;
 }
 
-.start-btn {
+/* 模式选择按钮组 */
+.mode-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   margin-top: 24px;
-  padding: 14px 48px;
-  font-size: clamp(1.1rem, 4vw, 1.4rem);
+  width: 100%;
+  max-width: 360px;
+}
+
+.mode-btn {
+  padding: 16px 32px;
+  font-size: clamp(1rem, 3.5vw, 1.2rem);
   font-family: var(--font-main);
   font-weight: 700;
   color: var(--bg-dark);
-  background: var(--crt-green);
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s;
+  text-align: center;
+}
+
+.mode-btn:hover {
+  transform: translateY(-2px);
+}
+
+.mode-btn .mode-icon {
+  font-size: 1.3em;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.mode-btn .mode-desc {
+  font-size: 0.8em;
+  font-weight: 400;
+  opacity: 0.8;
+  display: block;
+  margin-top: 4px;
+}
+
+.mode-btn.quiz-mode {
+  background: var(--crt-green);
   box-shadow: 0 0 20px rgba(0,255,65,0.3);
 }
 
-.start-btn:hover {
-  transform: translateY(-2px);
+.mode-btn.quiz-mode:hover {
   box-shadow: 0 0 30px rgba(0,255,65,0.5);
+}
+
+.mode-btn.score-mode {
+  background: var(--gold);
+  box-shadow: 0 0 20px rgba(255,215,0,0.3);
+}
+
+.mode-btn.score-mode:hover {
+  box-shadow: 0 0 30px rgba(255,215,0,0.5);
 }
 
 .end-screen h2 {
@@ -598,6 +723,15 @@ body.shaking {
     line-height: 28px;
     margin-right: 10px;
   }
+
+  .score-judge-btn {
+    padding: 20px 12px;
+    font-size: clamp(1.1rem, 4.5vw, 1.6rem);
+  }
+
+  .mode-buttons {
+    max-width: 300px;
+  }
 }
 
 /* 电视大屏适配 */
@@ -618,6 +752,11 @@ body.shaking {
     padding: 18px 24px;
     font-size: 1.5rem;
   }
+
+  .score-judge-btn {
+    padding: 32px 24px;
+    font-size: 2.5rem;
+  }
 }
 </style>
 </head>
@@ -635,20 +774,32 @@ body.shaking {
 <!-- 反馈文案弹出 -->
 <div class="feedback-popup" id="feedbackPopup"></div>
 
-<!-- ==================== 开始画面 ==================== -->
+<!-- ==================== 开始画面（含模式选择） ==================== -->
 <div class="screen-overlay start-screen" id="startScreen">
   <h2>⚡ 答题惩罚椅 ⚡</h2>
   <p>欢迎来到逃学威龙特别版！</p>
-  <p>答错题目就要被"电"哦！<br>每题限时 15 秒，超时也算答错！</p>
-  <p>连续答对 3 题有惊喜彩蛋 🎬</p>
-  <button class="start-btn" id="startBtn">开始挑战！</button>
+  <p>选择一个模式开始挑战</p>
+  <div class="mode-buttons">
+    <button class="mode-btn quiz-mode" id="quizModeBtn">
+      <span class="mode-icon">📝 答题模式</span>
+      内置题库，限时15秒答题
+      <span class="mode-desc">答错就要被"电"！连续答对3题有彩蛋</span>
+    </button>
+    <button class="mode-btn score-mode" id="scoreModeBtn">
+      <span class="mode-icon">🎯 记分模式</span>
+      自由判定对错，只做特效
+      <span class="mode-desc">适合老师/主持自己出题，按按钮执行惩罚</span>
+    </button>
+  </div>
 </div>
 
-<!-- ==================== 结束画面 ==================== -->
+<!-- ==================== 结束画面（仅答题模式） ==================== -->
 <div class="screen-overlay end-screen hidden" id="endScreen">
   <h2>🏁 挑战结束！🏁</h2>
   <div class="end-stats" id="endStats"></div>
-  <button class="start-btn" id="restartBtn">再来一次！</button>
+  <button class="mode-btn quiz-mode" id="restartBtn" style="max-width:360px;width:100%;">
+    <span class="mode-icon">🔄 再来一次</span>
+  </button>
 </div>
 
 <!-- ==================== 主游戏界面 ==================== -->
@@ -657,7 +808,7 @@ body.shaking {
   <!-- 标题 -->
   <div class="game-title">
     <h1>逃学威龙 · 答题惩罚椅</h1>
-    <div class="subtitle">— 经典桥段复刻 —</div>
+    <div class="subtitle" id="modeSubtitle">— 经典桥段复刻 —</div>
   </div>
 
   <!-- CRT 记分牌 -->
@@ -666,9 +817,9 @@ body.shaking {
       <div class="label">连对次数</div>
       <div class="value" id="streakValue">0</div>
     </div>
-    <div class="score-item">
-      <div class="label">当前题号</div>
-      <div class="value" id="questionNum">-</div>
+    <div class="score-item" id="middleScoreItem">
+      <div class="label" id="middleLabel">当前题号</div>
+      <div class="value" id="middleValue">-</div>
     </div>
     <div class="score-item">
       <div class="label">惩罚次数</div>
@@ -676,23 +827,33 @@ body.shaking {
     </div>
   </div>
 
-  <!-- 倒计时 -->
-  <div class="timer-section">
+  <!-- 倒计时（仅答题模式显示） -->
+  <div class="timer-section" id="timerSection">
     <div class="timer-display">
       <span class="timer-icon">💣</span>
       <span class="timer-value" id="timerValue">15</span>
     </div>
   </div>
 
-  <!-- 题目 -->
-  <div class="question-section">
+  <!-- 题目区（仅答题模式显示） -->
+  <div class="question-section" id="questionSection">
     <div class="question-number" id="questionLabel">准备开始...</div>
-    <div class="question-text" id="questionText">按下"开始挑战"按钮</div>
+    <div class="question-text" id="questionText">选择模式开始</div>
   </div>
 
-  <!-- 选项 -->
+  <!-- 选项区（仅答题模式显示） -->
   <div class="options-section" id="optionsSection">
     <!-- 动态生成 -->
+  </div>
+
+  <!-- 记分模式判定按钮（仅记分模式显示） -->
+  <div id="scoreModeArea" style="display:none; width:100%; display:none; flex-direction:column; align-items:center; gap:16px;">
+    <div class="score-mode-hint">自己出题，根据回答按下对应按钮</div>
+    <div class="score-mode-buttons">
+      <button class="score-judge-btn correct-btn" id="judgeCorrectBtn">✅ 正确</button>
+      <button class="score-judge-btn wrong-btn" id="judgeWrongBtn">❌ 错误</button>
+    </div>
+    <button class="reset-btn" id="resetScoreBtn">🔄 重置记分牌</button>
   </div>
 
   <!-- 电椅 -->
@@ -703,26 +864,30 @@ body.shaking {
 
   <!-- 版本信息 -->
   <div class="version-footer" id="versionFooter">
-    <!-- 由 GitHub Actions 构建时注入版本号，本地开发显示 dev -->
     版本: <span id="versionText">dev</span>
   </div>
 
 </div>
 
 <!-- ============================================================
-     音效说明：
-     由于浏览器安全策略，无法内嵌音频文件。
-     请将以下音效文件放在同目录下：
-       - correct.mp3  : 答对时的"叮"声
-       - wrong.mp3    : 答错时的电流"滋滋"声
-       - timeout.mp3  : 超时时的警报声
-     如果没有音频文件，将使用 Web Audio API 合成简易音效。
+     音效文件说明：
+     音效文件位于 sounds/ 目录下：
+       - sounds/correct.mp3  : 答对时的"叮"声
+       - sounds/wrong.mp3    : 答错时的电流"滋滋"声
+       - sounds/timeout.mp3  : 超时时的警报声
+     如果音频文件加载失败，将使用 Web Audio API 合成简易音效。
      ============================================================ -->
 
 <script>
 /* ==================== 音效系统 ==================== */
 const AudioSystem = {
   ctx: null,
+  /* 音效文件路径（相对于 index.html） */
+  soundFiles: {
+    correct: 'sounds/correct.mp3',
+    wrong: 'sounds/wrong.mp3',
+    timeout: 'sounds/timeout.mp3'
+  },
 
   /** 初始化 AudioContext（需要用户交互后才能创建） */
   init() {
@@ -733,19 +898,18 @@ const AudioSystem = {
 
   /**
    * 尝试播放外部音频文件，失败则使用合成音效
-   * @param {string} filename - 音频文件名
-   * @param {string} fallback - 合成音效类型: 'correct' | 'wrong' | 'timeout'
+   * @param {string} type - 音效类型: 'correct' | 'wrong' | 'timeout'
    */
-  playFile(filename, fallback) {
-    const audio = new Audio(filename);
+  playFile(type) {
+    const audio = new Audio(this.soundFiles[type]);
     audio.volume = 0.5;
     audio.play().catch(() => {
       // 文件不存在，使用合成音效
-      this.playSynth(fallback);
+      this.playSynth(type);
     });
   },
 
-  /** 使用 Web Audio API 合成音效 */
+  /** 使用 Web Audio API 合成音效（备用方案） */
   playSynth(type) {
     if (!this.ctx) return;
     const ctx = this.ctx;
@@ -814,20 +978,9 @@ const AudioSystem = {
     }
   },
 
-  /** 播放答对音效 */
-  playCorrect() {
-    this.playFile('correct.mp3', 'correct');
-  },
-
-  /** 播放答错音效 */
-  playWrong() {
-    this.playFile('wrong.mp3', 'wrong');
-  },
-
-  /** 播放超时音效 */
-  playTimeout() {
-    this.playFile('timeout.mp3', 'timeout');
-  }
+  playCorrect() { this.playFile('correct'); },
+  playWrong()   { this.playFile('wrong'); },
+  playTimeout() { this.playFile('timeout'); }
 };
 
 /* ==================== 题库 ==================== */
@@ -835,7 +988,7 @@ const QUESTIONS = [
   {
     q: '1 + 1 = ?',
     options: ['1', '2', '3'],
-    answer: 1 // 索引从0开始，正确答案是 '2'
+    answer: 1
   },
   {
     q: '地球绕太阳转一圈需要多久？',
@@ -886,13 +1039,16 @@ const QUESTIONS = [
 
 /* ==================== 游戏状态 ==================== */
 const state = {
-  currentQuestion: 0,    // 当前题目索引
-  streak: 0,            // 连对次数
-  punishments: 0,        // 惩罚次数
-  correctCount: 0,       // 总答对数
-  timer: null,           // 倒计时定时器
-  timeLeft: 15,          // 剩余时间
-  isAnswered: false,     // 当前题是否已回答
+  mode: null,             // 'quiz' | 'score'
+  currentQuestion: 0,
+  streak: 0,
+  punishments: 0,
+  correctCount: 0,
+  totalCount: 0,          // 记分模式的总判定次数
+  timer: null,
+  timeLeft: 15,
+  isAnswered: false,
+  isProcessing: false,    // 防止特效动画期间重复点击
   totalQuestions: QUESTIONS.length
 };
 
@@ -901,15 +1057,24 @@ const dom = {
   startScreen: document.getElementById('startScreen'),
   endScreen: document.getElementById('endScreen'),
   endStats: document.getElementById('endStats'),
-  startBtn: document.getElementById('startBtn'),
+  quizModeBtn: document.getElementById('quizModeBtn'),
+  scoreModeBtn: document.getElementById('scoreModeBtn'),
   restartBtn: document.getElementById('restartBtn'),
   streakValue: document.getElementById('streakValue'),
-  questionNum: document.getElementById('questionNum'),
+  middleLabel: document.getElementById('middleLabel'),
+  middleValue: document.getElementById('middleValue'),
   punishValue: document.getElementById('punishValue'),
+  timerSection: document.getElementById('timerSection'),
   timerValue: document.getElementById('timerValue'),
+  questionSection: document.getElementById('questionSection'),
   questionLabel: document.getElementById('questionLabel'),
   questionText: document.getElementById('questionText'),
   optionsSection: document.getElementById('optionsSection'),
+  scoreModeArea: document.getElementById('scoreModeArea'),
+  judgeCorrectBtn: document.getElementById('judgeCorrectBtn'),
+  judgeWrongBtn: document.getElementById('judgeWrongBtn'),
+  resetScoreBtn: document.getElementById('resetScoreBtn'),
+  modeSubtitle: document.getElementById('modeSubtitle'),
   chairCanvas: document.getElementById('chairCanvas'),
   chairGlow: document.getElementById('chairGlow'),
   screenRedOverlay: document.getElementById('screenRedOverlay'),
@@ -921,42 +1086,31 @@ const dom = {
 
 /* ==================== 电椅绘制 ==================== */
 const chairCtx = dom.chairCanvas.getContext('2d');
-let chairColor = '#555'; // 默认灰色
+let chairColor = '#555';
 
-/**
- * 绘制像素风格的电椅
- * @param {string} color - 椅子主色调
- * @param {boolean} electric - 是否显示电流效果
- */
 function drawChair(color, electric) {
   const ctx = chairCtx;
   const w = dom.chairCanvas.width;
   const h = dom.chairCanvas.height;
   ctx.clearRect(0, 0, w, h);
 
-  // 椅子底座
   ctx.fillStyle = '#333';
   ctx.fillRect(40, h - 30, w - 80, 20);
 
-  // 椅子腿
   ctx.fillStyle = color;
   ctx.fillRect(60, h - 60, 16, 35);
   ctx.fillRect(w - 76, h - 60, 16, 35);
 
-  // 椅子座面
   ctx.fillStyle = color;
   ctx.fillRect(50, h - 70, w - 100, 20);
 
-  // 椅背
   ctx.fillRect(50, 40, 16, h - 110);
   ctx.fillRect(w - 66, 40, 16, h - 110);
 
-  // 椅背横杆
   ctx.fillRect(50, 50, w - 100, 12);
   ctx.fillRect(50, 90, w - 100, 12);
   ctx.fillRect(50, 130, w - 100, 12);
 
-  // 头部电极（两个圆球）
   ctx.fillStyle = electric ? '#ff4444' : '#888';
   ctx.beginPath();
   ctx.arc(w / 2 - 30, 30, 14, 0, Math.PI * 2);
@@ -965,7 +1119,6 @@ function drawChair(color, electric) {
   ctx.arc(w / 2 + 30, 30, 14, 0, Math.PI * 2);
   ctx.fill();
 
-  // 电极连接线
   ctx.strokeStyle = electric ? '#ff6666' : '#666';
   ctx.lineWidth = 3;
   ctx.beginPath();
@@ -977,23 +1130,17 @@ function drawChair(color, electric) {
   ctx.lineTo(w / 2 + 30, 50);
   ctx.stroke();
 
-  // 手臂束缚带
   ctx.fillStyle = '#aa4400';
   ctx.fillRect(66, h - 160, 50, 10);
   ctx.fillRect(w - 116, h - 160, 50, 10);
-
-  // 脚部束缚带
   ctx.fillRect(66, h - 55, 50, 8);
   ctx.fillRect(w - 116, h - 55, 50, 8);
 
-  // 电流效果
   if (electric) {
     ctx.strokeStyle = '#00bfff';
     ctx.lineWidth = 2;
     ctx.shadowColor = '#00bfff';
     ctx.shadowBlur = 10;
-
-    // 随机闪电
     for (let i = 0; i < 5; i++) {
       ctx.beginPath();
       let x = w / 2 + (Math.random() - 0.5) * 120;
@@ -1006,53 +1153,34 @@ function drawChair(color, electric) {
       }
       ctx.stroke();
     }
-
     ctx.shadowBlur = 0;
   }
 
-  // "DANGER" 标签
   ctx.fillStyle = electric ? '#ff0000' : '#666';
   ctx.font = 'bold 10px monospace';
   ctx.textAlign = 'center';
   ctx.fillText(electric ? '⚡ DANGER ⚡' : 'DANGER', w / 2, h - 8);
 }
 
-// 初始绘制
 drawChair(chairColor, false);
 
 /* ==================== 视觉特效函数 ==================== */
 
-/**
- * 全屏震动
- * @param {number} duration - 震动持续时间(ms)
- */
 function triggerShake(duration = 500) {
   document.body.classList.add('shaking');
-  setTimeout(() => {
-    document.body.classList.remove('shaking');
-  }, duration);
+  setTimeout(() => document.body.classList.remove('shaking'), duration);
 }
 
-/** 屏幕边缘泛红 */
 function triggerScreenRed() {
   dom.screenRedOverlay.classList.add('active');
-  setTimeout(() => {
-    dom.screenRedOverlay.classList.remove('active');
-  }, 800);
+  setTimeout(() => dom.screenRedOverlay.classList.remove('active'), 800);
 }
 
-/** 闪电特效 */
 function triggerLightning() {
   dom.lightningOverlay.classList.add('active');
-  setTimeout(() => {
-    dom.lightningOverlay.classList.remove('active');
-  }, 600);
+  setTimeout(() => dom.lightningOverlay.classList.remove('active'), 600);
 }
 
-/**
- * 撒金色粒子
- * @param {number} count - 粒子数量
- */
 function spawnParticles(count = 30) {
   const container = dom.particlesContainer;
   for (let i = 0; i < count; i++) {
@@ -1062,35 +1190,23 @@ function spawnParticles(count = 30) {
     p.style.top = -10 + 'px';
     p.style.animationDelay = Math.random() * 0.5 + 's';
     p.style.animationDuration = (1 + Math.random()) + 's';
-    // 随机大小
     const size = 4 + Math.random() * 8;
     p.style.width = size + 'px';
     p.style.height = size + 'px';
     container.appendChild(p);
-    // 动画结束后移除
     setTimeout(() => p.remove(), 2500);
   }
 }
 
-/**
- * 显示反馈文案
- * @param {string} text - 文案内容
- * @param {string} type - 'correct' | 'wrong' | 'easter-egg'
- * @param {number} duration - 显示时长(ms)
- */
 function showFeedback(text, type, duration = 1500) {
   const popup = dom.feedbackPopup;
   popup.textContent = text;
   popup.className = 'feedback-popup ' + type;
-  // 强制重绘后添加 show 类
   void popup.offsetWidth;
   popup.classList.add('show');
-  setTimeout(() => {
-    popup.classList.remove('show');
-  }, duration);
+  setTimeout(() => popup.classList.remove('show'), duration);
 }
 
-/** 椅子发绿光 */
 function chairGlowGreen() {
   dom.chairGlow.className = 'chair-glow green';
   chairColor = '#00cc33';
@@ -1102,7 +1218,6 @@ function chairGlowGreen() {
   }, 1500);
 }
 
-/** 椅子变红+闪电 */
 function chairGlowRed() {
   dom.chairGlow.className = 'chair-glow red';
   chairColor = '#cc0000';
@@ -1116,21 +1231,81 @@ function chairGlowRed() {
 
 /* ==================== 记分牌动画 ==================== */
 
-/** 连对次数 +1 动画 */
 function pulseStreak() {
   const el = dom.streakValue;
   el.classList.add('pulse');
   setTimeout(() => el.classList.remove('pulse'), 300);
 }
 
-/** 惩罚次数 +1 动画 */
 function pulsePunish() {
   const el = dom.punishValue;
   el.classList.add('danger-pulse');
   setTimeout(() => el.classList.remove('danger-pulse'), 300);
 }
 
-/* ==================== 倒计时系统 ==================== */
+/* ==================== 共用的正确/错误特效 ==================== */
+
+/** 触发"正确"全套特效 */
+function triggerCorrectEffect() {
+  AudioSystem.playCorrect();
+  state.streak++;
+  state.correctCount++;
+  state.totalCount++;
+  dom.streakValue.textContent = state.streak;
+  pulseStreak();
+
+  chairGlowGreen();
+  spawnParticles(30);
+  showFeedback('回答正确！好犀利啊！', 'correct');
+
+  // 连击彩蛋：连续3次正确
+  if (state.streak === 3) {
+    setTimeout(() => {
+      showFeedback('🎬 你系卧底？ 🎬', 'easter-egg', 2500);
+    }, 1600);
+  }
+}
+
+/** 触发"错误"全套特效 */
+function triggerWrongEffect() {
+  AudioSystem.playWrong();
+  state.streak = 0;
+  state.punishments++;
+  state.totalCount++;
+  dom.streakValue.textContent = state.streak;
+  dom.punishValue.textContent = state.punishments;
+  pulsePunish();
+
+  triggerShake();
+  triggerScreenRed();
+  triggerLightning();
+  chairGlowRed();
+  showFeedback('回答错误！电佢！', 'wrong');
+}
+
+/* ==================== 模式切换：显示/隐藏 UI ==================== */
+
+function showQuizUI() {
+  dom.timerSection.style.display = '';
+  dom.questionSection.style.display = '';
+  dom.optionsSection.style.display = '';
+  dom.scoreModeArea.style.display = 'none';
+  dom.middleLabel.textContent = '当前题号';
+  dom.middleValue.textContent = '-';
+  dom.modeSubtitle.textContent = '— 经典桥段复刻 —';
+}
+
+function showScoreUI() {
+  dom.timerSection.style.display = 'none';
+  dom.questionSection.style.display = 'none';
+  dom.optionsSection.style.display = 'none';
+  dom.scoreModeArea.style.display = 'flex';
+  dom.middleLabel.textContent = '总判定';
+  dom.middleValue.textContent = '0';
+  dom.modeSubtitle.textContent = '— 记分模式 · 自由判定 —';
+}
+
+/* ==================== 倒计时系统（仅答题模式） ==================== */
 
 function startTimer() {
   state.timeLeft = 15;
@@ -1141,12 +1316,10 @@ function startTimer() {
     state.timeLeft--;
     dom.timerValue.textContent = Math.max(0, state.timeLeft);
 
-    // 最后5秒进入紧急模式
     if (state.timeLeft <= 5 && state.timeLeft > 0) {
       dom.timerValue.classList.add('urgent');
     }
 
-    // 时间到
     if (state.timeLeft <= 0) {
       clearInterval(state.timer);
       handleTimeout();
@@ -1161,17 +1334,15 @@ function stopTimer() {
   }
 }
 
-/* ==================== 核心游戏逻辑 ==================== */
+/* ==================== 答题模式逻辑 ==================== */
 
-/** 加载当前题目 */
 function loadQuestion() {
   const q = QUESTIONS[state.currentQuestion];
   dom.questionLabel.textContent = `第 ${state.currentQuestion + 1} / ${state.totalQuestions} 题`;
-  dom.questionNum.textContent = state.currentQuestion + 1;
+  dom.middleValue.textContent = state.currentQuestion + 1;
   dom.questionText.textContent = q.q;
   state.isAnswered = false;
 
-  // 生成选项按钮
   const letters = ['A', 'B', 'C'];
   dom.optionsSection.innerHTML = '';
 
@@ -1183,90 +1354,36 @@ function loadQuestion() {
     dom.optionsSection.appendChild(btn);
   });
 
-  // 启动倒计时
   startTimer();
 }
 
-/**
- * 处理用户选择
- * @param {number} selectedIndex - 用户选择的选项索引
- */
 function handleAnswer(selectedIndex) {
-  if (state.isAnswered) return;
+  if (state.isAnswered || state.isProcessing) return;
   state.isAnswered = true;
   stopTimer();
 
   const q = QUESTIONS[state.currentQuestion];
   const buttons = dom.optionsSection.querySelectorAll('.option-btn');
-
-  // 禁用所有按钮
   buttons.forEach(btn => btn.disabled = true);
 
   if (selectedIndex === q.answer) {
-    handleCorrect(buttons);
+    // 答对
+    buttons[q.answer].classList.add('correct');
+    state.isProcessing = true;
+    triggerCorrectEffect();
+    setTimeout(() => { state.isProcessing = false; nextQuestion(); }, 2000);
   } else {
-    handleWrong(buttons, selectedIndex);
+    // 答错
+    buttons[selectedIndex].classList.add('wrong');
+    buttons[q.answer].classList.add('correct');
+    state.isProcessing = true;
+    triggerWrongEffect();
+    setTimeout(() => { state.isProcessing = false; nextQuestion(); }, 2500);
   }
 }
 
-/** 处理答对 */
-function handleCorrect(buttons) {
-  AudioSystem.playCorrect();
-
-  // 标记正确选项
-  buttons[QUESTIONS[state.currentQuestion].answer].classList.add('correct');
-
-  // 更新状态
-  state.streak++;
-  state.correctCount++;
-  dom.streakValue.textContent = state.streak;
-  pulseStreak();
-
-  // 视觉特效
-  chairGlowGreen();
-  spawnParticles(30);
-  showFeedback('回答正确！好犀利啊！', 'correct');
-
-  // 连击彩蛋检查
-  if (state.streak === 3) {
-    setTimeout(() => {
-      showFeedback('🎬 你系卧底？ 🎬', 'easter-egg', 2500);
-    }, 1600);
-  }
-
-  // 进入下一题
-  setTimeout(() => nextQuestion(), 2000);
-}
-
-/** 处理答错 */
-function handleWrong(buttons, selectedIndex) {
-  AudioSystem.playWrong();
-
-  // 标记选错和正确选项
-  buttons[selectedIndex].classList.add('wrong');
-  buttons[QUESTIONS[state.currentQuestion].answer].classList.add('correct');
-
-  // 更新状态
-  state.streak = 0;
-  state.punishments++;
-  dom.streakValue.textContent = state.streak;
-  dom.punishValue.textContent = state.punishments;
-  pulsePunish();
-
-  // 视觉特效 - 全套惩罚
-  triggerShake();
-  triggerScreenRed();
-  triggerLightning();
-  chairGlowRed();
-  showFeedback('回答错误！电佢！', 'wrong');
-
-  // 进入下一题
-  setTimeout(() => nextQuestion(), 2500);
-}
-
-/** 处理超时 */
 function handleTimeout() {
-  if (state.isAnswered) return;
+  if (state.isAnswered || state.isProcessing) return;
   state.isAnswered = true;
 
   AudioSystem.playTimeout();
@@ -1275,24 +1392,23 @@ function handleTimeout() {
   buttons.forEach(btn => btn.disabled = true);
   buttons[QUESTIONS[state.currentQuestion].answer].classList.add('correct');
 
-  // 更新状态
   state.streak = 0;
   state.punishments++;
+  state.totalCount++;
   dom.streakValue.textContent = state.streak;
   dom.punishValue.textContent = state.punishments;
   pulsePunish();
 
-  // 视觉特效
   triggerShake();
   triggerScreenRed();
   triggerLightning();
   chairGlowRed();
   showFeedback('时间到！电佢！', 'wrong');
 
-  setTimeout(() => nextQuestion(), 2500);
+  state.isProcessing = true;
+  setTimeout(() => { state.isProcessing = false; nextQuestion(); }, 2500);
 }
 
-/** 进入下一题或结束 */
 function nextQuestion() {
   state.currentQuestion++;
   if (state.currentQuestion >= state.totalQuestions) {
@@ -1302,33 +1418,30 @@ function nextQuestion() {
   }
 }
 
-/** 开始游戏 */
-function startGame() {
+function startQuizMode() {
   AudioSystem.init();
-
-  // 重置状态
+  state.mode = 'quiz';
   state.currentQuestion = 0;
   state.streak = 0;
   state.punishments = 0;
   state.correctCount = 0;
+  state.totalCount = 0;
   state.isAnswered = false;
+  state.isProcessing = false;
 
   dom.streakValue.textContent = '0';
   dom.punishValue.textContent = '0';
 
-  // 隐藏开始/结束画面
   dom.startScreen.classList.add('hidden');
   dom.endScreen.classList.add('hidden');
 
-  // 加载第一题
+  showQuizUI();
   loadQuestion();
 }
 
-/** 结束游戏 */
 function endGame() {
   stopTimer();
 
-  // 计算结果
   const accuracy = Math.round((state.correctCount / state.totalQuestions) * 100);
   let grade = '😅 继续努力';
   if (accuracy >= 90) grade = '🏆 超级卧底！';
@@ -1346,13 +1459,66 @@ function endGame() {
   dom.endScreen.classList.remove('hidden');
 }
 
+/* ==================== 记分模式逻辑 ==================== */
+
+function startScoreMode() {
+  AudioSystem.init();
+  state.mode = 'score';
+  state.streak = 0;
+  state.punishments = 0;
+  state.correctCount = 0;
+  state.totalCount = 0;
+  state.isProcessing = false;
+
+  dom.streakValue.textContent = '0';
+  dom.punishValue.textContent = '0';
+  dom.middleValue.textContent = '0';
+
+  dom.startScreen.classList.add('hidden');
+  dom.endScreen.classList.add('hidden');
+
+  showScoreUI();
+}
+
+/** 记分模式：判定正确 */
+function judgeCorrect() {
+  if (state.isProcessing) return;
+  state.isProcessing = true;
+  triggerCorrectEffect();
+  dom.middleValue.textContent = state.totalCount;
+  setTimeout(() => { state.isProcessing = false; }, 1500);
+}
+
+/** 记分模式：判定错误 */
+function judgeWrong() {
+  if (state.isProcessing) return;
+  state.isProcessing = true;
+  triggerWrongEffect();
+  dom.middleValue.textContent = state.totalCount;
+  setTimeout(() => { state.isProcessing = false; }, 2000);
+}
+
+/** 重置记分牌 */
+function resetScore() {
+  state.streak = 0;
+  state.punishments = 0;
+  state.correctCount = 0;
+  state.totalCount = 0;
+  dom.streakValue.textContent = '0';
+  dom.punishValue.textContent = '0';
+  dom.middleValue.textContent = '0';
+  showFeedback('记分牌已重置', 'correct', 1000);
+}
+
 /* ==================== 事件绑定 ==================== */
-dom.startBtn.addEventListener('click', startGame);
-dom.restartBtn.addEventListener('click', startGame);
+dom.quizModeBtn.addEventListener('click', startQuizMode);
+dom.scoreModeBtn.addEventListener('click', startScoreMode);
+dom.restartBtn.addEventListener('click', startQuizMode);
+dom.judgeCorrectBtn.addEventListener('click', judgeCorrect);
+dom.judgeWrongBtn.addEventListener('click', judgeWrong);
+dom.resetScoreBtn.addEventListener('click', resetScore);
 
 /* ==================== 版本号显示 ==================== */
-// 如果由 GitHub Actions 构建，版本号会通过构建脚本注入到 window.__VERSION__
-// 本地开发时显示 "dev"
 (function setVersion() {
   const versionEl = document.getElementById('versionText');
   if (window.__VERSION__) {
