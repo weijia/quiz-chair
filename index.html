@@ -5,10 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>逃学威龙 - 答题惩罚椅</title>
 <!-- ============================================================
-     逃学威龙 · 答题惩罚椅  v1.2.0
+     逃学威龙 · 答题惩罚椅  v1.4.0
      复刻电影经典桥段的 Web 小游戏
      模式一：答题模式 - 内置/自定义题库，限时答题
      模式二：记分模式 - 自由判定对错，只做奖励/惩罚特效
+     模式三：盲答模式 - 答错不显示正确答案
      数据持久化：PouchDB (IndexedDB)
      ============================================================ -->
 <!-- PouchDB CDN -->
@@ -240,40 +241,6 @@ body.shaking { animation: shake 0.5s ease-in-out; }
 .chair-glow.red { background: radial-gradient(circle, rgba(255,26,26,0.4) 0%, transparent 70%); opacity: 1; animation: glow-pulse-red 0.3s ease-in-out 3; }
 @keyframes glow-pulse-red { 0%, 100% { transform: translate(-50%,-50%) scale(1); opacity: 0.8; } 50% { transform: translate(-50%,-50%) scale(1.2); opacity: 1; } }
 
-/* 暂停遮罩 */
-.pause-overlay {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.85); z-index: 10000;
-  display: flex; flex-direction: column; justify-content: center; align-items: center;
-  opacity: 0; pointer-events: none; transition: opacity 0.3s;
-}
-.pause-overlay.show { opacity: 1; pointer-events: auto; }
-.pause-overlay h2 {
-  font-size: clamp(2rem, 7vw, 3.5rem); color: var(--crt-green);
-  text-shadow: 0 0 20px rgba(0,255,65,0.5); margin-bottom: 16px;
-}
-.pause-overlay p { font-size: clamp(1rem, 3vw, 1.2rem); color: var(--text-yellow); margin-bottom: 8px; }
-.pause-overlay .pause-timer {
-  font-size: clamp(2.5rem, 8vw, 4rem); font-weight: 900; color: var(--danger-red);
-  text-shadow: 0 0 15px rgba(255,26,26,0.5); margin: 12px 0;
-}
-.pause-btn {
-  position: fixed; top: 12px; right: 12px; z-index: 9995;
-  padding: 6px 14px; font-size: 0.85rem; font-family: var(--font-main); font-weight: 600;
-  color: var(--text-white); background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 6px; cursor: pointer; transition: all 0.2s;
-}
-.pause-btn:hover { background: rgba(255,255,255,0.15); border-color: var(--crt-green); color: var(--crt-green); }
-
-/* 全屏按钮 */
-.fullscreen-btn {
-  position: fixed; top: 12px; left: 12px; z-index: 9995;
-  padding: 6px 14px; font-size: 0.85rem; font-family: var(--font-main); font-weight: 600;
-  color: var(--text-white); background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 6px; cursor: pointer; transition: all 0.2s;
-}
-.fullscreen-btn:hover { background: rgba(255,255,255,0.15); border-color: var(--crt-green); color: var(--crt-green); }
-
 /* ==================== 开始/结束画面 ==================== */
 .screen-overlay {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -380,8 +347,6 @@ body.shaking { animation: shake 0.5s ease-in-out; }
   border-radius: 6px; outline: none;
 }
 .manual-form input:focus { border-color: var(--crt-green); }
-.manual-form input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.3); }
-textarea:focus { border-color: var(--crt-green) !important; }
 .manual-form .answer-options { display: flex; gap: 12px; align-items: center; }
 .manual-form .answer-options label { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 0.95rem; }
 .manual-form .answer-options input[type="radio"] { accent-color: var(--crt-green); width: 18px; height: 18px; }
@@ -442,7 +407,7 @@ textarea:focus { border-color: var(--crt-green) !important; }
 /* 版本 */
 .version-footer { width: 100%; text-align: center; padding: 12px 0 20px; font-size: 0.75rem; color: rgba(255,255,255,0.3); }
 
-/* 响应式 */
+/* ==================== 响应式适配 ==================== */
 @media (max-width: 480px) {
   .game-container { padding: 10px; gap: 14px; }
   .scoreboard { padding: 12px 16px; }
@@ -453,12 +418,135 @@ textarea:focus { border-color: var(--crt-green) !important; }
   .mode-buttons { max-width: 300px; }
   .modal-box { padding: 16px; }
 }
+
+/* 电视大屏适配 */
 @media (min-width: 1920px) {
   .game-container { max-width: 1000px; }
   .game-title h1 { font-size: 3rem; }
   .question-text { font-size: 2.5rem; }
   .option-btn { padding: 18px 24px; font-size: 1.5rem; }
   .score-judge-btn { padding: 32px 24px; font-size: 2.5rem; }
+}
+
+/* ==================== 横屏适配 (landscape) ==================== */
+@media (orientation: landscape) and (max-height: 500px) {
+  .game-container { gap: 8px; padding: 8px 16px; min-height: auto; }
+  .game-title { padding: 4px 0; }
+  .game-title h1 { font-size: 1.2rem; letter-spacing: 2px; }
+  .game-title .subtitle { font-size: 0.7rem; }
+  .scoreboard { padding: 6px 12px; }
+  .score-item .label { font-size: 0.55rem; }
+  .score-item .value { font-size: 1.2rem; }
+  .timer-section { display: none; } /* 横屏隐藏倒计时区域，节省空间 */
+  .question-section { display: none; } /* 横屏隐藏题目区域 */
+  .options-section { flex-direction: row; gap: 8px; }
+  .option-btn { padding: 8px 12px; font-size: 0.9rem; }
+  .option-btn .option-letter { width: 24px; height: 24px; line-height: 24px; }
+  .chair-section { padding: 4px 0; }
+  .chair-canvas { width: 120px; height: auto; }
+  .chair-glow { width: 150px; height: 150px; }
+  .version-footer { display: none; }
+  .score-mode-buttons { gap: 8px; }
+  .score-judge-btn { padding: 12px 8px; font-size: 1rem; }
+  .score-mode-hint { font-size: 0.7rem; }
+  .reset-btn { padding: 6px 16px; font-size: 0.75rem; }
+  .fullscreen-btn, .pause-btn { padding: 4px 8px; font-size: 0.7rem; }
+  .feedback-popup { font-size: 1.2rem; }
+  .feedback-popup.wrong { font-size: 1.4rem; }
+}
+
+@media (orientation: landscape) and (min-height: 501px) and (max-height: 700px) {
+  .game-container { gap: 10px; padding: 10px 16px; }
+  .game-title { padding: 6px 0; }
+  .game-title h1 { font-size: 1.4rem; }
+  .scoreboard { padding: 8px 16px; }
+  .score-item .value { font-size: 1.5rem; }
+  .timer-display { padding: 6px 16px; }
+  .timer-value { font-size: 1.5rem; }
+  .question-text { font-size: 1.1rem; }
+  .option-btn { padding: 10px 14px; font-size: 0.95rem; }
+  .chair-section { padding: 8px 0; }
+  .chair-canvas { width: 160px; height: auto; }
+  .chair-glow { width: 200px; height: 200px; }
+}
+
+/* ==================== 暂停遮罩 ==================== */
+.pause-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.85); z-index: 10000;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+.pause-overlay.show { opacity: 1; pointer-events: auto; }
+.pause-overlay h2 {
+  font-size: clamp(2rem, 7vw, 3.5rem); color: var(--crt-green);
+  text-shadow: 0 0 20px rgba(0,255,65,0.5); margin-bottom: 16px;
+}
+.pause-overlay p { font-size: clamp(1rem, 3vw, 1.2rem); color: var(--text-yellow); margin-bottom: 8px; }
+.pause-overlay .pause-timer {
+  font-size: clamp(2.5rem, 8vw, 4rem); font-weight: 900; color: var(--danger-red);
+  text-shadow: 0 0 15px rgba(255,26,26,0.5); margin: 12px 0;
+}
+.pause-btn {
+  position: fixed; top: 12px; right: 12px; z-index: 9995;
+  padding: 6px 14px; font-size: 0.85rem; font-family: var(--font-main); font-weight: 600;
+  color: var(--text-white); background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 6px; cursor: pointer; transition: all 0.2s;
+}
+.pause-btn:hover { background: rgba(255,255,255,0.15); border-color: var(--crt-green); color: var(--crt-green); }
+
+/* 全屏按钮 */
+.fullscreen-btn {
+  position: fixed; top: 12px; left: 12px; z-index: 9995;
+  padding: 6px 14px; font-size: 0.85rem; font-family: var(--font-main); font-weight: 600;
+  color: var(--text-white); background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 6px; cursor: pointer; transition: all 0.2s;
+}
+.fullscreen-btn:hover { background: rgba(255,255,255,0.15); border-color: var(--crt-green); color: var(--crt-green); }
+
+/* 模式选择弹窗 */
+.mode-select-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.9); z-index: 10003;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+.mode-select-overlay.show { opacity: 1; pointer-events: auto; }
+.mode-select-overlay h3 {
+  font-size: clamp(1.3rem, 4vw, 1.8rem); color: var(--crt-green);
+  text-shadow: 0 0 15px rgba(0,255,65,0.3); margin-bottom: 8px;
+}
+.mode-select-overlay .bank-name {
+  font-size: clamp(1rem, 3vw, 1.2rem); color: var(--text-yellow); margin-bottom: 20px;
+}
+.mode-select-overlay .mode-select-buttons {
+  display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 320px;
+}
+.mode-select-overlay .mode-select-buttons button {
+  padding: 14px 24px; font-size: clamp(1rem, 3.5vw, 1.1rem);
+  font-family: var(--font-main); font-weight: 700; border: none;
+  border-radius: 10px; cursor: pointer; transition: all 0.2s;
+}
+.mode-select-overlay .mode-select-buttons .btn-normal {
+  background: var(--crt-green); color: var(--bg-dark);
+  box-shadow: 0 0 15px rgba(0,255,65,0.2);
+}
+.mode-select-overlay .mode-select-buttons .btn-normal:hover {
+  box-shadow: 0 0 25px rgba(0,255,65,0.4); transform: translateY(-2px);
+}
+.mode-select-overlay .mode-select-buttons .btn-blind {
+  background: #e040fb; color: var(--bg-dark);
+  box-shadow: 0 0 15px rgba(224,64,251,0.2);
+}
+.mode-select-overlay .mode-select-buttons .btn-blind:hover {
+  box-shadow: 0 0 25px rgba(224,64,251,0.4); transform: translateY(-2px);
+}
+.mode-select-overlay .mode-select-buttons .btn-cancel {
+  background: rgba(255,255,255,0.1); color: var(--text-white);
+  border: 1px solid rgba(255,255,255,0.2);
+}
+.mode-select-overlay .mode-select-buttons .btn-cancel:hover {
+  background: rgba(255,255,255,0.15);
 }
 </style>
 </head>
@@ -502,11 +590,6 @@ textarea:focus { border-color: var(--crt-green) !important; }
       自由判定对错，只做特效
       <span class="mode-desc">适合老师/主持自己出题，按按钮执行惩罚</span>
     </button>
-    <button class="mode-btn blind-mode" id="blindModeBtn">
-      <span class="mode-icon">🙈 盲答模式</span>
-      答错不显示正确答案
-      <span class="mode-desc">答错直接电，不揭晓答案！更具挑战性</span>
-    </button>
   </div>
   <div class="start-links">
     <button class="start-link-btn" id="importBtn">📎 导入自定义题库 (JSON / CSV)</button>
@@ -521,6 +604,17 @@ textarea:focus { border-color: var(--crt-green) !important; }
   <button class="mode-btn quiz-mode" id="restartBtn" style="max-width:360px;width:100%;">
     <span class="mode-icon">🔄 再来一次</span>
   </button>
+</div>
+
+<!-- ==================== 模式选择弹窗（选择题库后弹出） ==================== -->
+<div class="mode-select-overlay" id="modeSelectOverlay">
+  <h3>选择答题模式</h3>
+  <div class="bank-name" id="modeSelectBankName"></div>
+  <div class="mode-select-buttons">
+    <button class="btn-normal" id="modeSelectNormal">📝 普通模式（答错揭晓答案）</button>
+    <button class="btn-blind" id="modeSelectBlind">🙈 盲答模式（答错不揭晓）</button>
+    <button class="btn-cancel" id="modeSelectCancel">取消</button>
+  </div>
 </div>
 
 <!-- ==================== 导入模态框 ==================== -->
@@ -653,10 +747,14 @@ textarea:focus { border-color: var(--crt-green) !important; }
 
 <script>
 /* ================================================================
-     逃学威龙 · 答题惩罚椅  v1.2.0
+     逃学威龙 · 答题惩罚椅  v1.4.0
      - PouchDB 持久化存储
      - 自定义题库导入（JSON / CSV / 手动）
-     - 历史记录
+     - 历史记录 + 再来一次
+     - 暂停功能
+     - 全屏切换
+     - 盲答模式（选择题库后再选模式）
+     - 横屏适配
      ================================================================ */
 
 /* ==================== PouchDB 初始化 ==================== */
@@ -790,7 +888,7 @@ const state = {
   mode: null, currentQuestion: 0, streak: 0, maxStreak: 0,
   punishments: 0, correctCount: 0, totalCount: 0,
   timer: null, timeLeft: 15, isAnswered: false, isProcessing: false,
-  isPaused: false,             // 是否暂停中
+  isPaused: false,
   hideAnswer: false,          // 盲答模式：答错不显示正确答案
   questions: [...BUILT_IN_QUESTIONS], // 当前使用的题库
   quizBankTitle: '默认题库',           // 当前题库名称（用于历史记录）
@@ -805,7 +903,6 @@ const dom = {
   endStats: document.getElementById('endStats'),
   quizModeBtn: document.getElementById('quizModeBtn'),
   scoreModeBtn: document.getElementById('scoreModeBtn'),
-  blindModeBtn: document.getElementById('blindModeBtn'),
   restartBtn: document.getElementById('restartBtn'),
   importBtn: document.getElementById('importBtn'),
   historyBtn: document.getElementById('historyBtn'),
@@ -836,6 +933,12 @@ const dom = {
   pauseTimerDisplay: document.getElementById('pauseTimerDisplay'),
   resumeBtn: document.getElementById('resumeBtn'),
   fullscreenBtn: document.getElementById('fullscreenBtn'),
+  // 模式选择弹窗
+  modeSelectOverlay: document.getElementById('modeSelectOverlay'),
+  modeSelectBankName: document.getElementById('modeSelectBankName'),
+  modeSelectNormal: document.getElementById('modeSelectNormal'),
+  modeSelectBlind: document.getElementById('modeSelectBlind'),
+  modeSelectCancel: document.getElementById('modeSelectCancel'),
   // 导入模态框
   importModal: document.getElementById('importModal'),
   importClose: document.getElementById('importClose'),
@@ -956,7 +1059,7 @@ function startTimer() {
   state.timeLeft = 15; dom.timerValue.textContent = state.timeLeft; dom.timerValue.classList.remove('urgent');
   state.isPaused = false;
   state.timer = setInterval(() => {
-    if (state.isPaused) return; // 暂停时不倒计时
+    if (state.isPaused) return;
     state.timeLeft--; dom.timerValue.textContent = Math.max(0, state.timeLeft);
     if (state.timeLeft <= 5 && state.timeLeft > 0) dom.timerValue.classList.add('urgent');
     if (state.timeLeft <= 0) { clearInterval(state.timer); handleTimeout(); }
@@ -990,7 +1093,7 @@ function handleAnswer(idx) {
     triggerCorrectEffect(); setTimeout(() => { state.isProcessing = false; nextQuestion(); }, 2000);
   } else {
     btns[idx].classList.add('wrong');
-    if (!state.hideAnswer) btns[q.answer].classList.add('correct'); // 盲答模式不显示正确答案
+    if (!state.hideAnswer) btns[q.answer].classList.add('correct');
     state.isProcessing = true;
     triggerWrongEffect(); setTimeout(() => { state.isProcessing = false; nextQuestion(); }, 2500);
   }
@@ -1026,7 +1129,7 @@ function startQuizMode(questions, title, bankId, hideAnswer) {
   state.isAnswered = false; state.isProcessing = false;
   dom.streakValue.textContent = '0'; dom.punishValue.textContent = '0';
   dom.startScreen.classList.add('hidden'); dom.endScreen.classList.add('hidden');
-  closeImportModal();
+  closeImportModal(); closeModeSelect();
   showQuizUI(); loadQuestion();
 }
 
@@ -1044,7 +1147,6 @@ async function endGame() {
     <p>最高连对: <span class="stat-value">${state.maxStreak}</span></p>
     <p style="margin-top:12px;font-size:1.3em">${grade}</p>`;
   dom.endScreen.classList.remove('hidden');
-  // 保存历史记录到 PouchDB（关联当前题库ID以便重新玩）
   await saveHistory({
     mode: 'quiz', quizBankTitle: state.quizBankTitle,
     quizBankId: state.currentQuizBankId || null,
@@ -1061,7 +1163,7 @@ function startScoreMode() {
   state.correctCount = 0; state.totalCount = 0; state.isProcessing = false;
   dom.streakValue.textContent = '0'; dom.punishValue.textContent = '0'; dom.middleValue.textContent = '0';
   dom.startScreen.classList.add('hidden'); dom.endScreen.classList.add('hidden');
-  closeImportModal(); showScoreUI();
+  closeImportModal(); closeModeSelect(); showScoreUI();
 }
 
 function judgeCorrect() {
@@ -1077,7 +1179,6 @@ function judgeWrong() {
 }
 
 function resetScore() {
-  // 保存记分模式历史
   if (state.totalCount > 0) {
     const accuracy = state.totalCount > 0 ? Math.round((state.correctCount / state.totalCount) * 100) : 0;
     saveHistory({
@@ -1092,9 +1193,35 @@ function resetScore() {
   showFeedback('记分牌已重置', 'correct', 1000);
 }
 
+/* ==================== 模式选择弹窗 ==================== */
+let pendingBank = null; // 等待选择模式的题库
+
+function openModeSelect(bank) {
+  pendingBank = bank;
+  dom.modeSelectBankName.textContent = bank.title + ' (' + bank.questionCount + '题)';
+  dom.modeSelectOverlay.classList.add('show');
+}
+
+function closeModeSelect() {
+  dom.modeSelectOverlay.classList.remove('show');
+  pendingBank = null;
+}
+
+dom.modeSelectNormal.addEventListener('click', () => {
+  if (!pendingBank) return;
+  startQuizMode(pendingBank.questions, pendingBank.title + ' (' + pendingBank.questionCount + '题)', pendingBank._id, false);
+});
+
+dom.modeSelectBlind.addEventListener('click', () => {
+  if (!pendingBank) return;
+  startQuizMode(pendingBank.questions, pendingBank.title + ' (' + pendingBank.questionCount + '题)', pendingBank._id, true);
+});
+
+dom.modeSelectCancel.addEventListener('click', closeModeSelect);
+
 /* ==================== 导入模态框 ==================== */
-let parsedQuestions = []; // 文件解析后的临时题目
-let manualQuestions = []; // 手动添加的临时题目
+let parsedQuestions = [];
+let manualQuestions = [];
 
 function openImportModal() { dom.importModal.classList.add('show'); loadSavedBanks(); }
 function closeImportModal() { dom.importModal.classList.remove('show'); parsedQuestions = []; manualQuestions = []; resetImportUI(); }
@@ -1164,15 +1291,13 @@ function parseJSON(content) {
 function parseCSV(content) {
   const lines = content.trim().split('\n');
   if (lines.length < 2) throw new Error('CSV 文件至少需要表头和一行数据');
-  // 跳过表头
   const questions = [];
   const answerMap = { 'A': 0, 'B': 1, 'C': 2, 'a': 0, 'b': 1, 'c': 2 };
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
-    // 简单 CSV 解析（不处理引号内逗号的复杂情况）
     const parts = line.split(',');
-    if (parts.length < 5) continue; // 跳过不完整的行
+    if (parts.length < 5) continue;
     const answerStr = parts[4].trim().toUpperCase();
     if (!(answerStr in answerMap)) continue;
     questions.push({
@@ -1205,11 +1330,12 @@ function validateQuestions(questions, title) {
   return valid;
 }
 
-// 文件导入 - 开始按钮
+// 文件导入 - 开始按钮（保存后弹出模式选择）
 dom.fileStartBtn.addEventListener('click', async () => {
   if (parsedQuestions.length === 0) return;
   const doc = await saveQuizBank('导入题库', parsedQuestions);
-  startQuizMode(parsedQuestions, '导入题库 (' + parsedQuestions.length + '题)', doc._id);
+  closeImportModal();
+  openModeSelect(doc);
 });
 
 dom.fileCancelBtn.addEventListener('click', () => { parsedQuestions = []; resetImportUI(); });
@@ -1226,7 +1352,6 @@ function parsePastedJSON() {
     return;
   }
   try {
-    // 尝试提取 JSON（可能包含 ```json ... ``` 代码块包裹）
     let jsonStr = raw;
     const codeBlockMatch = raw.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
     if (codeBlockMatch) jsonStr = codeBlockMatch[1].trim();
@@ -1242,7 +1367,8 @@ document.getElementById('pasteStartBtn').addEventListener('click', async () => {
   parsePastedJSON();
   if (pastedQuestions.length === 0) return;
   const doc = await saveQuizBank('粘贴题库', pastedQuestions);
-  startQuizMode(pastedQuestions, '粘贴题库 (' + pastedQuestions.length + '题)', doc._id);
+  closeImportModal();
+  openModeSelect(doc);
 });
 
 document.getElementById('pasteCancelBtn').addEventListener('click', () => {
@@ -1261,7 +1387,6 @@ dom.addQuestionBtn.addEventListener('click', () => {
   if (!q || !a || !b || !c) { showFeedback('请填写完整题目和选项', 'wrong', 1000); return; }
   manualQuestions.push({ q, options: [a, b, c], answer });
   dom.manualCount.textContent = `已添加 ${manualQuestions.length} 题`;
-  // 清空表单
   document.getElementById('mq').value = ''; document.getElementById('ma').value = '';
   document.getElementById('mb').value = ''; document.getElementById('mc').value = '';
   document.querySelector('input[name="manswer"][value="0"]').checked = true;
@@ -1271,7 +1396,8 @@ dom.addQuestionBtn.addEventListener('click', () => {
 dom.manualStartBtn.addEventListener('click', async () => {
   if (manualQuestions.length === 0) { showFeedback('请先添加至少一道题', 'wrong', 1000); return; }
   const doc = await saveQuizBank('手动题库', manualQuestions);
-  startQuizMode(manualQuestions, '手动题库 (' + manualQuestions.length + '题)', doc._id);
+  closeImportModal();
+  openModeSelect(doc);
 });
 
 dom.manualCancelBtn.addEventListener('click', () => { manualQuestions = []; resetImportUI(); });
@@ -1296,12 +1422,11 @@ async function loadSavedBanks() {
     </div>
   `).join('');
 
-  // 绑定事件
   dom.bankList.querySelectorAll('.bank-use').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const bank = banks.find(b => b._id === btn.dataset.id);
-      if (bank) startQuizMode(bank.questions, bank.title + ' (' + bank.questionCount + '题)', bank._id);
+      if (bank) { closeImportModal(); openModeSelect(bank); }
     });
   });
   dom.bankList.querySelectorAll('.bank-del').forEach(btn => {
@@ -1324,7 +1449,7 @@ async function openHistoryModal() {
   }
   dom.historyList.innerHTML = records.map((r, idx) => `
     <div class="history-item">
-      <div class="h-mode">${r.mode === 'quiz' ? '📝 答题模式' : '🎯 记分模式'}</div>
+      <div class="h-mode">${r.mode === 'quiz' ? (r.hideAnswer ? '🙈 盲答模式' : '📝 答题模式') : '🎯 记分模式'}</div>
       <div class="h-title">${r.quizBankTitle || '未知'}</div>
       <div class="h-stats">
         <span>总${r.mode === 'quiz' ? '题数' : '判定'}: ${r.totalQuestions}</span>
@@ -1338,7 +1463,6 @@ async function openHistoryModal() {
     </div>
   `).join('') + '<button class="history-clear" id="clearHistBtn">清除所有记录</button>';
 
-  // "再来一次"按钮事件
   dom.historyList.querySelectorAll('.history-replay').forEach(btn => {
     btn.addEventListener('click', async () => {
       const bankId = btn.dataset.bankId;
@@ -1390,7 +1514,6 @@ function toggleFullscreen() {
   }
 }
 
-// 监听全屏状态变化，同步按钮文字
 document.addEventListener('fullscreenchange', () => {
   dom.fullscreenBtn.textContent = document.fullscreenElement ? '⛶ 退出' : '⛶ 全屏';
 });
@@ -1401,7 +1524,6 @@ document.addEventListener('webkitfullscreenchange', () => {
 /* ==================== 事件绑定 ==================== */
 dom.quizModeBtn.addEventListener('click', () => startQuizMode(null, null));
 dom.scoreModeBtn.addEventListener('click', startScoreMode);
-dom.blindModeBtn.addEventListener('click', () => startQuizMode(null, null, null, true));
 dom.restartBtn.addEventListener('click', () => startQuizMode(null, null));
 dom.judgeCorrectBtn.addEventListener('click', judgeCorrect);
 dom.judgeWrongBtn.addEventListener('click', judgeWrong);
@@ -1417,9 +1539,8 @@ dom.historyClose.addEventListener('click', closeHistoryModal);
 // 点击模态框背景关闭
 dom.importModal.addEventListener('click', e => { if (e.target === dom.importModal) closeImportModal(); });
 dom.historyModal.addEventListener('click', e => { if (e.target === dom.historyModal) closeHistoryModal(); });
-// 点击暂停遮罩背景不关闭（必须通过按钮继续），但按 ESC 键可以暂停/继续
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && state.mode === 'quiz' && !state.isAnswered && dom.startScreen.classList.contains('hidden')) {
+  if (e.key === 'Escape' && state.mode === 'quiz' && !state.isAnswered && dom.startScreen.classList.contains('hidden') && !dom.modeSelectOverlay.classList.contains('show')) {
     state.isPaused ? resumeGame() : pauseGame();
   }
 });
