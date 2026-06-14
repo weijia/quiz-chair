@@ -548,6 +548,17 @@ body.shaking { animation: shake 0.5s ease-in-out; }
 .mode-select-overlay .mode-select-buttons .btn-cancel:hover {
   background: rgba(255,255,255,0.15);
 }
+
+/* 返回首页按钮 */
+.home-btn {
+  position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 9995;
+  padding: 6px 14px; font-size: 0.85rem; font-family: var(--font-main); font-weight: 600;
+  color: var(--text-white); background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 6px; cursor: pointer; transition: all 0.2s; display: none;
+}
+.home-btn:hover { background: rgba(255,255,255,0.15); border-color: var(--crt-green); color: var(--crt-green); }
+.home-btn.visible { display: block; }
+.fullscreen-btn.home-visible { left: 12px; }
 </style>
 </head>
 <body>
@@ -560,6 +571,9 @@ body.shaking { animation: shake 0.5s ease-in-out; }
 
 <!-- 全屏按钮 -->
 <button class="fullscreen-btn" id="fullscreenBtn">⛶ 全屏</button>
+
+<!-- 返回首页按钮 -->
+<button class="home-btn" id="homeBtn">🏠 首页</button>
 
 <!-- 暂停按钮（答题模式显示） -->
 <button class="pause-btn" id="pauseBtn" style="display:none;">⏸ 暂停</button>
@@ -601,9 +615,12 @@ body.shaking { animation: shake 0.5s ease-in-out; }
 <div class="screen-overlay end-screen hidden" id="endScreen">
   <h2>🏁 挑战结束！🏁</h2>
   <div class="end-stats" id="endStats"></div>
-  <button class="mode-btn quiz-mode" id="restartBtn" style="max-width:360px;width:100%;">
-    <span class="mode-icon">🔄 再来一次</span>
-  </button>
+  <div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:360px;">
+    <button class="mode-btn quiz-mode" id="restartBtn" style="width:100%;">
+      <span class="mode-icon">🔄 再来一次</span>
+    </button>
+    <button class="start-link-btn" id="endHomeBtn" style="width:100%;">🏠 返回首页</button>
+  </div>
 </div>
 
 <!-- ==================== 模式选择弹窗（选择题库后弹出） ==================== -->
@@ -933,6 +950,8 @@ const dom = {
   pauseTimerDisplay: document.getElementById('pauseTimerDisplay'),
   resumeBtn: document.getElementById('resumeBtn'),
   fullscreenBtn: document.getElementById('fullscreenBtn'),
+  homeBtn: document.getElementById('homeBtn'),
+  endHomeBtn: document.getElementById('endHomeBtn'),
   // 模式选择弹窗
   modeSelectOverlay: document.getElementById('modeSelectOverlay'),
   modeSelectBankName: document.getElementById('modeSelectBankName'),
@@ -1045,6 +1064,8 @@ function showQuizUI() {
   dom.middleLabel.textContent = '当前题号'; dom.middleValue.textContent = '-';
   dom.modeSubtitle.textContent = state.hideAnswer ? '— 盲答模式 · 答错不揭晓 —' : '— 经典桥段复刻 —';
   dom.pauseBtn.style.display = '';
+  dom.homeBtn.classList.add('visible');
+  dom.fullscreenBtn.classList.add('home-visible');
 }
 function showScoreUI() {
   dom.timerSection.style.display = 'none'; dom.questionSection.style.display = 'none';
@@ -1052,6 +1073,8 @@ function showScoreUI() {
   dom.middleLabel.textContent = '总判定'; dom.middleValue.textContent = '0';
   dom.modeSubtitle.textContent = '— 记分模式 · 自由判定 —';
   dom.pauseBtn.style.display = 'none';
+  dom.homeBtn.classList.add('visible');
+  dom.fullscreenBtn.classList.add('home-visible');
 }
 
 /* ==================== 倒计时 ==================== */
@@ -1521,6 +1544,46 @@ document.addEventListener('webkitfullscreenchange', () => {
   dom.fullscreenBtn.textContent = document.webkitFullscreenElement ? '⛶ 退出' : '⛶ 全屏';
 });
 
+/* ==================== 返回首页 ==================== */
+function goHome() {
+  // 如果正在答题中且有进度，保存历史记录
+  if (state.mode === 'quiz' && state.totalCount > 0 && state.currentQuestion > 0) {
+    const accuracy = state.totalQuestions > 0 ? Math.round((state.correctCount / state.totalQuestions) * 100) : 0;
+    saveHistory({
+      mode: 'quiz', quizBankTitle: state.quizBankTitle + '（中途退出）',
+      quizBankId: state.currentQuizBankId || null,
+      hideAnswer: state.hideAnswer,
+      totalQuestions: state.currentQuestion, correctCount: state.correctCount,
+      punishments: state.punishments, maxStreak: state.maxStreak, accuracy: accuracy
+    });
+  }
+  // 记分模式中途退出也保存
+  if (state.mode === 'score' && state.totalCount > 0) {
+    const accuracy = Math.round((state.correctCount / state.totalCount) * 100);
+    saveHistory({
+      mode: 'score', quizBankTitle: '自由判定（中途退出）',
+      totalQuestions: state.totalCount, correctCount: state.correctCount,
+      punishments: state.punishments, maxStreak: state.maxStreak, accuracy: accuracy
+    });
+  }
+
+  // 重置状态
+  stopTimer();
+  state.mode = null;
+  state.isPaused = false;
+  state.isProcessing = false;
+  dom.pauseOverlay.classList.remove('show');
+  dom.homeBtn.classList.remove('visible');
+  dom.fullscreenBtn.classList.remove('home-visible');
+  dom.pauseBtn.style.display = 'none';
+  dom.pauseBtn.textContent = '⏸ 暂停';
+  dom.endScreen.classList.add('hidden');
+  dom.startScreen.classList.remove('hidden');
+  dom.optionsSection.innerHTML = '';
+  dom.questionText.textContent = '选择模式开始';
+  dom.questionLabel.textContent = '准备开始...';
+}
+
 /* ==================== 事件绑定 ==================== */
 dom.quizModeBtn.addEventListener('click', () => startQuizMode(null, null));
 dom.scoreModeBtn.addEventListener('click', startScoreMode);
@@ -1531,6 +1594,8 @@ dom.resetScoreBtn.addEventListener('click', resetScore);
 dom.pauseBtn.addEventListener('click', () => { state.isPaused ? resumeGame() : pauseGame(); });
 dom.resumeBtn.addEventListener('click', resumeGame);
 dom.fullscreenBtn.addEventListener('click', toggleFullscreen);
+dom.homeBtn.addEventListener('click', goHome);
+dom.endHomeBtn.addEventListener('click', goHome);
 dom.importBtn.addEventListener('click', openImportModal);
 dom.importClose.addEventListener('click', closeImportModal);
 dom.historyBtn.addEventListener('click', openHistoryModal);
