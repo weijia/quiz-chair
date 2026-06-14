@@ -735,6 +735,7 @@ const state = {
   timer: null, timeLeft: 15, isAnswered: false, isProcessing: false,
   questions: [...BUILT_IN_QUESTIONS], // 当前使用的题库
   quizBankTitle: '默认题库',           // 当前题库名称（用于历史记录）
+  currentQuizBankId: null,              // 当前题库在 PouchDB 中的 _id（用于历史记录重玩）
   totalQuestions: BUILT_IN_QUESTIONS.length
 };
 
@@ -941,10 +942,11 @@ function nextQuestion() {
   if (state.currentQuestion >= state.totalQuestions) endGame(); else loadQuestion();
 }
 
-function startQuizMode(questions, title) {
+function startQuizMode(questions, title, bankId) {
   AudioSystem.init();
   state.mode = 'quiz'; state.questions = questions || [...BUILT_IN_QUESTIONS];
   state.quizBankTitle = title || '默认题库';
+  state.currentQuizBankId = bankId || null;
   state.totalQuestions = state.questions.length;
   state.currentQuestion = 0; state.streak = 0; state.maxStreak = 0;
   state.punishments = 0; state.correctCount = 0; state.totalCount = 0;
@@ -969,9 +971,10 @@ async function endGame() {
     <p>最高连对: <span class="stat-value">${state.maxStreak}</span></p>
     <p style="margin-top:12px;font-size:1.3em">${grade}</p>`;
   dom.endScreen.classList.remove('hidden');
-  // 保存历史记录到 PouchDB
+  // 保存历史记录到 PouchDB（关联当前题库ID以便重新玩）
   await saveHistory({
     mode: 'quiz', quizBankTitle: state.quizBankTitle,
+    quizBankId: state.currentQuizBankId || null,
     totalQuestions: state.totalQuestions, correctCount: state.correctCount,
     punishments: state.punishments, maxStreak: state.maxStreak, accuracy: accuracy
   });
@@ -1132,7 +1135,7 @@ function validateQuestions(questions, title) {
 dom.fileStartBtn.addEventListener('click', async () => {
   if (parsedQuestions.length === 0) return;
   const doc = await saveQuizBank('导入题库', parsedQuestions);
-  startQuizMode(parsedQuestions, '导入题库 (' + parsedQuestions.length + '题)');
+  startQuizMode(parsedQuestions, '导入题库 (' + parsedQuestions.length + '题)', doc._id);
 });
 
 dom.fileCancelBtn.addEventListener('click', () => { parsedQuestions = []; resetImportUI(); });
@@ -1164,8 +1167,8 @@ function parsePastedJSON() {
 document.getElementById('pasteStartBtn').addEventListener('click', async () => {
   parsePastedJSON();
   if (pastedQuestions.length === 0) return;
-  await saveQuizBank('粘贴题库', pastedQuestions);
-  startQuizMode(pastedQuestions, '粘贴题库 (' + pastedQuestions.length + '题)');
+  const doc = await saveQuizBank('粘贴题库', pastedQuestions);
+  startQuizMode(pastedQuestions, '粘贴题库 (' + pastedQuestions.length + '题)', doc._id);
 });
 
 document.getElementById('pasteCancelBtn').addEventListener('click', () => {
@@ -1194,7 +1197,7 @@ dom.addQuestionBtn.addEventListener('click', () => {
 dom.manualStartBtn.addEventListener('click', async () => {
   if (manualQuestions.length === 0) { showFeedback('请先添加至少一道题', 'wrong', 1000); return; }
   const doc = await saveQuizBank('手动题库', manualQuestions);
-  startQuizMode(manualQuestions, '手动题库 (' + manualQuestions.length + '题)');
+  startQuizMode(manualQuestions, '手动题库 (' + manualQuestions.length + '题)', doc._id);
 });
 
 dom.manualCancelBtn.addEventListener('click', () => { manualQuestions = []; resetImportUI(); });
@@ -1224,7 +1227,7 @@ async function loadSavedBanks() {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const bank = banks.find(b => b._id === btn.dataset.id);
-      if (bank) startQuizMode(bank.questions, bank.title + ' (' + bank.questionCount + '题)');
+      if (bank) startQuizMode(bank.questions, bank.title + ' (' + bank.questionCount + '题)', bank._id);
     });
   });
   dom.bankList.querySelectorAll('.bank-del').forEach(btn => {
@@ -1245,7 +1248,7 @@ async function openHistoryModal() {
     dom.historyList.innerHTML = '<div class="history-empty">暂无历史记录</div><button class="history-clear" style="display:none;" id="clearHistBtn">清除所有记录</button>';
     return;
   }
-  dom.historyList.innerHTML = records.map(r => `
+  dom.historyList.innerHTML = records.map((r, idx) => `
     <div class="history-item">
       <div class="h-mode">${r.mode === 'quiz' ? '📝 答题模式' : '🎯 记分模式'}</div>
       <div class="h-title">${r.quizBankTitle || '未知'}</div>
@@ -1257,8 +1260,23 @@ async function openHistoryModal() {
         <span>最高连对: ${r.maxStreak}</span>
       </div>
       <div class="h-time">${new Date(r.playedAt).toLocaleString('zh-CN')}</div>
+      ${r.mode === 'quiz' && r.quizBankId ? `<button class="start-link-btn history-replay" data-idx="${idx}" data-bank-id="${r.quizBankId}" style="margin-top:8px;width:auto;display:inline-block;padding:6px 16px;font-size:0.85rem;">🔄 再来一次</button>` : ''}
     </div>
   `).join('') + '<button class="history-clear" id="clearHistBtn">清除所有记录</button>';
+
+  // "再来一次"按钮事件
+  dom.historyList.querySelectorAll('.history-replay').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const bankId = btn.dataset.bankId;
+      try {
+        const bank = await db.get(bankId);
+        closeHistoryModal();
+        startQuizMode(bank.questions, bank.title + ' (' + bank.questionCount + '题)', bank._id);
+      } catch (e) {
+        showFeedback('题库已被删除，无法重玩', 'wrong', 1500);
+      }
+    });
+  });
 
   document.getElementById('clearHistBtn').addEventListener('click', async () => {
     await clearHistory();
