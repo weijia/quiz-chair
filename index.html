@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>逃学威龙 - 答题惩罚椅</title>
 <!-- ============================================================
-     逃学威龙 · 答题惩罚椅  v1.4.0
+     逃学威龙 · 答题惩罚椅  v1.6.0
      复刻电影经典桥段的 Web 小游戏
      模式一：答题模式 - 内置/自定义题库，限时答题
      模式二：记分模式 - 自由判定对错，只做奖励/惩罚特效
@@ -228,6 +228,7 @@ body.shaking { animation: shake 0.5s ease-in-out; }
   border-radius: 8px; cursor: pointer; transition: all 0.2s;
 }
 .reset-btn:hover { color: var(--text-white); background: rgba(255,255,255,0.1); }
+.reset-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 .score-mode-hint { font-size: clamp(0.8rem, 2.5vw, 0.95rem); color: rgba(255,255,255,0.4); text-align: center; line-height: 1.6; }
 
 /* 电椅 */
@@ -455,7 +456,7 @@ body.shaking { animation: shake 0.5s ease-in-out; }
   .question-number { font-size: 0.5rem; margin-bottom: 0; }
   .question-text { font-size: 0.7rem; min-height: 1em; line-height: 1.15; }
   .options-section { flex-direction: row; gap: 3px; flex-wrap: wrap; }
-  .option-btn { padding: 3px 6px; font-size: 0.65rem; flex: 1; min-width: 70px; }
+  .option-btn { padding: 3px 6px; font-size: 0.65rem; flex: 1; min-width: 60px; }
   .option-btn .option-letter { width: 14px; height: 14px; line-height: 14px; margin-right: 3px; font-size: 0.6rem; }
   .chair-section { padding: 1px 0; }
   .chair-canvas { width: 50px; height: auto; }
@@ -759,6 +760,7 @@ body.shaking { animation: shake 0.5s ease-in-out; }
   <div class="start-links">
     <button class="start-link-btn" id="importBtn">📎 导入自定义题库 (JSON / CSV)</button>
     <button class="start-link-btn" id="historyBtn">📊 历史记录</button>
+    <button class="start-link-btn" id="aiGuideBtn">🤖 AI 生成题库指南</button>
   </div>
 </div>
 
@@ -819,7 +821,7 @@ body.shaking { animation: shake 0.5s ease-in-out; }
 
     <!-- 粘贴JSON Tab -->
     <div class="modal-tab-content" id="tabPaste">
-      <textarea id="jsonPasteArea" placeholder='将 JSON 内容粘贴到这里，例如：&#10;{&#10;  "title": "我的题库",&#10;  "questions": [&#10;    { "q": "1+1=?", "options": ["1","2","3"], "answer": 1 }&#10;  ]&#10;}' style="width:100%;min-height:180px;padding:12px;font-size:0.9rem;font-family:monospace,'Courier New',var(--font-main);color:var(--text-white);background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.2);border-radius:8px;resize:vertical;outline:none;line-height:1.5;"></textarea>
+      <textarea id="jsonPasteArea" placeholder='将 JSON 内容粘贴到这里，例如：&#10;{&#10;  "title": "我的题库",&#10;  "questions": [&#10;    { "q": "1+1=?", "options": ["1","2","3","4"], "answer": 1 }&#10;  ]&#10;}' style="width:100%;min-height:180px;padding:12px;font-size:0.9rem;font-family:monospace,'Courier New',var(--font-main);color:var(--text-white);background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.2);border-radius:8px;resize:vertical;outline:none;line-height:1.5;"></textarea>
       <div id="pastePreview"></div>
       <div class="form-actions" style="margin-top:12px; display:flex; gap:10px;">
         <button class="btn-cancel" id="pasteCancelBtn" style="flex:1;padding:10px;font-family:var(--font-main);border:none;border-radius:6px;cursor:pointer;background:rgba(255,255,255,0.1);color:var(--text-white);">取消</button>
@@ -834,11 +836,13 @@ body.shaking { animation: shake 0.5s ease-in-out; }
         <input type="text" id="ma" placeholder="选项 A">
         <input type="text" id="mb" placeholder="选项 B">
         <input type="text" id="mc" placeholder="选项 C">
+        <input type="text" id="md" placeholder="选项 D（可选，留空则为3个选项）">
         <div class="answer-options">
           <span>正确答案：</span>
           <label><input type="radio" name="manswer" value="0" checked> A</label>
           <label><input type="radio" name="manswer" value="1"> B</label>
           <label><input type="radio" name="manswer" value="2"> C</label>
+          <label><input type="radio" name="manswer" value="3"> D</label>
         </div>
         <button class="btn-add-question" id="addQuestionBtn">+ 添加此题</button>
         <div class="manual-count" id="manualCount">已添加 0 题</div>
@@ -862,6 +866,78 @@ body.shaking { animation: shake 0.5s ease-in-out; }
     <button class="modal-close" id="historyClose">&times;</button>
     <div class="modal-title">📊 历史记录</div>
     <div class="history-list" id="historyList"></div>
+  </div>
+</div>
+
+<!-- ==================== AI 生成题库指南模态框 ==================== -->
+<div class="modal-overlay" id="aiGuideModal">
+  <div class="modal-box">
+    <button class="modal-close" id="aiGuideClose">&times;</button>
+    <div class="modal-title">🤖 AI 生成题库指南</div>
+    <div style="font-size:0.9rem;color:var(--text-white);line-height:1.8;">
+      <p style="margin-bottom:12px;color:var(--text-yellow);">使用方法：</p>
+      <ol style="padding-left:20px;margin-bottom:16px;">
+        <li>复制下方的提示词</li>
+        <li>打开任意 AI 工具（ChatGPT / Claude / 通义千问 等）</li>
+        <li>粘贴提示词，并将你的材料（考试范围/大纲/试卷/笔记等，照片请先OCR）附在末尾</li>
+        <li>AI 会返回 JSON 格式的题库</li>
+        <li>复制 JSON 内容，回到本程序 → 导入自定义题库 → 粘贴JSON</li>
+      </ol>
+      <p style="margin-bottom:8px;color:var(--crt-green);font-weight:700;">📋 提示词（点击复制）：</p>
+      <div id="aiPromptText" style="background:rgba(0,255,65,0.05);border:1px solid rgba(0,255,65,0.2);border-radius:8px;padding:12px;font-size:0.8rem;line-height:1.6;white-space:pre-wrap;cursor:pointer;position:relative;margin-bottom:12px;" title="点击复制">你是一个专业的题库生成助手。请根据我提供的内容，生成一份答题游戏所需的 JSON 题库。
+
+我提供的内容可能是以下任意一种形式（照片或文字均可）：
+- 考试范围或知识点的描述
+- 教学大纲
+- 试卷
+- 考试题目
+- 学习笔记或复习资料
+- 课本章节内容
+- 其他任何与考试相关的材料
+
+如果是照片，请先通过 OCR 识别为文字后粘贴给我。
+
+生成要求：
+1. 每道题必须有4个选项（A/B/C/D）
+2. answer 是正确答案的索引（0=A, 1=B, 2=C, 3=D）
+3. 如果原题有超过4个选项，保留最合理的4个（必须包含正确答案）
+4. 如果原题不足4个选项，请补充合理的干扰项凑齐4个
+5. 如果原题没有选项，请根据知识点自行构造4个合理选项（1个正确+3个干扰项）
+6. 题目文字尽量简洁，适合在手机/电视屏幕上显示
+7. 尽量覆盖我提供的所有知识点，题目数量根据内容多少自行决定
+
+输出必须是以下 JSON 格式，不要输出其他多余内容：
+{
+  "title": "题库名称",
+  "questions": [
+    {
+      "q": "题目内容",
+      "options": ["选项A", "选项B", "选项C", "选项D"],
+      "answer": 0
+    }
+  ]
+}
+
+以下是我提供的内容：
+[在此粘贴或描述你的材料]</div>
+      <button class="btn-import-start" id="copyPromptBtn" style="width:100%;padding:10px;font-family:var(--font-main);font-weight:600;border:none;border-radius:6px;cursor:pointer;background:var(--gold);color:var(--bg-dark);margin-bottom:16px;">📋 复制提示词</button>
+      <p style="margin-bottom:8px;color:var(--crt-green);font-weight:700;">📄 JSON 格式示例：</p>
+      <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:12px;font-size:0.8rem;font-family:monospace;line-height:1.5;white-space:pre-wrap;color:var(--text-yellow);">{
+  "title": "数学测验",
+  "questions": [
+    {
+      "q": "1 + 1 = ?",
+      "options": ["1", "2", "3", "4"],
+      "answer": 1
+    },
+    {
+      "q": "地球绕太阳转一圈需要多久？",
+      "options": ["一个月", "一年", "一天", "一周"],
+      "answer": 1
+    }
+  ]
+}</div>
+    </div>
   </div>
 </div>
 
@@ -907,6 +983,7 @@ body.shaking { animation: shake 0.5s ease-in-out; }
       <button class="score-judge-btn correct-btn" id="judgeCorrectBtn">✅ 正确</button>
       <button class="score-judge-btn wrong-btn" id="judgeWrongBtn">❌ 错误</button>
     </div>
+    <button class="reset-btn" id="undoJudgeBtn" disabled>↩️ 撤销上一次</button>
     <button class="reset-btn" id="resetScoreBtn">🔄 重置记分牌</button>
   </div>
 
@@ -920,7 +997,7 @@ body.shaking { animation: shake 0.5s ease-in-out; }
 
 <script>
 /* ================================================================
-     逃学威龙 · 答题惩罚椅  v1.4.0
+     逃学威龙 · 答题惩罚椅  v1.6.0
      - PouchDB 持久化存储
      - 自定义题库导入（JSON / CSV / 手动）
      - 历史记录 + 再来一次
@@ -928,6 +1005,9 @@ body.shaking { animation: shake 0.5s ease-in-out; }
      - 全屏切换
      - 盲答模式（选择题库后再选模式）
      - 横屏适配
+     - 支持4选项 (A/B/C/D)
+     - 记分模式撤销功能
+     - AI 生成题库指南
      ================================================================ */
 
 /* ==================== PouchDB 初始化 ==================== */
@@ -1068,7 +1148,8 @@ const state = {
   questions: [...BUILT_IN_QUESTIONS], // 当前使用的题库
   quizBankTitle: '默认题库',           // 当前题库名称（用于历史记录）
   currentQuizBankId: null,              // 当前题库在 PouchDB 中的 _id（用于历史记录重玩）
-  totalQuestions: BUILT_IN_QUESTIONS.length
+  totalQuestions: BUILT_IN_QUESTIONS.length,
+  lastJudge: null            // 记分模式：记录上一次判定 'correct' 或 'wrong'
 };
 
 /* ==================== DOM 引用 ==================== */
@@ -1094,6 +1175,7 @@ const dom = {
   scoreModeArea: document.getElementById('scoreModeArea'),
   judgeCorrectBtn: document.getElementById('judgeCorrectBtn'),
   judgeWrongBtn: document.getElementById('judgeWrongBtn'),
+  undoJudgeBtn: document.getElementById('undoJudgeBtn'),
   resetScoreBtn: document.getElementById('resetScoreBtn'),
   modeSubtitle: document.getElementById('modeSubtitle'),
   chairCanvas: document.getElementById('chairCanvas'),
@@ -1134,6 +1216,11 @@ const dom = {
   historyModal: document.getElementById('historyModal'),
   historyClose: document.getElementById('historyClose'),
   historyList: document.getElementById('historyList'),
+  // AI 指南模态框
+  aiGuideBtn: document.getElementById('aiGuideBtn'),
+  aiGuideModal: document.getElementById('aiGuideModal'),
+  aiGuideClose: document.getElementById('aiGuideClose'),
+  copyPromptBtn: document.getElementById('copyPromptBtn'),
 };
 
 /* ==================== 电椅绘制 ==================== */
@@ -1233,6 +1320,7 @@ function showScoreUI() {
   dom.pauseBtn.style.display = 'none';
   dom.homeBtn.classList.add('visible');
   dom.fullscreenBtn.classList.add('home-visible');
+  dom.undoJudgeBtn.disabled = true;
 }
 
 /* ==================== 倒计时 ==================== */
@@ -1256,8 +1344,8 @@ function loadQuestion() {
   dom.middleValue.textContent = state.currentQuestion + 1;
   dom.questionText.textContent = q.q; state.isAnswered = false;
 
-  // 随机打乱选项顺序，避免记住答案位置
-  const indices = [0, 1, 2];
+  // 随机打乱选项顺序，避免记住答案位置（动态根据选项数量生成 indices）
+  const indices = Array.from({ length: q.options.length }, (_, i) => i);
   for (let i = indices.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [indices[i], indices[j]] = [indices[j], indices[i]];
@@ -1267,7 +1355,8 @@ function loadQuestion() {
   const newAnswer = indices.indexOf(q.answer);
   state.currentCorrectAnswer = newAnswer;
 
-  const letters = ['A', 'B', 'C']; dom.optionsSection.innerHTML = '';
+  const letters = ['A', 'B', 'C', 'D', 'E', 'F'].slice(0, q.options.length);
+  dom.optionsSection.innerHTML = '';
   shuffledOptions.forEach((opt, idx) => {
     const btn = document.createElement('button'); btn.className = 'option-btn';
     btn.innerHTML = `<span class="option-letter">${letters[idx]}</span>${opt}`;
@@ -1379,6 +1468,7 @@ function startScoreMode() {
   AudioSystem.init(); state.mode = 'score';
   state.streak = 0; state.maxStreak = 0; state.punishments = 0;
   state.correctCount = 0; state.totalCount = 0; state.isProcessing = false;
+  state.lastJudge = null;
   dom.streakValue.textContent = '0'; dom.punishValue.textContent = '0'; dom.middleValue.textContent = '0';
   dom.startScreen.classList.add('hidden'); dom.endScreen.classList.add('hidden');
   closeImportModal(); closeModeSelect(); showScoreUI();
@@ -1386,14 +1476,44 @@ function startScoreMode() {
 
 function judgeCorrect() {
   if (state.isProcessing) return; state.isProcessing = true;
+  state.lastJudge = 'correct';
   triggerCorrectEffect(); dom.middleValue.textContent = state.totalCount;
+  dom.undoJudgeBtn.disabled = false;
   setTimeout(() => { state.isProcessing = false; }, 1500);
 }
 
 function judgeWrong() {
   if (state.isProcessing) return; state.isProcessing = true;
+  state.lastJudge = 'wrong';
   triggerWrongEffect(); dom.middleValue.textContent = state.totalCount;
+  dom.undoJudgeBtn.disabled = false;
   setTimeout(() => { state.isProcessing = false; }, 2000);
+}
+
+function undoJudge() {
+  if (!state.lastJudge) return;
+  if (state.lastJudge === 'correct') {
+    // 回退 triggerCorrectEffect 的效果
+    state.streak--;
+    state.correctCount--;
+    state.totalCount--;
+    // 重新计算 maxStreak
+    if (state.streak > state.maxStreak) state.maxStreak = state.streak;
+    // 如果 streak 回退后 > maxStreak 不可能，但 maxStreak 可能需要调整
+    // maxStreak 不会因为撤销而减少（它是历史最高）
+  } else if (state.lastJudge === 'wrong') {
+    // 回退 triggerWrongEffect 的效果
+    state.streak = 0; // 错误时 streak 被置0，撤销后无法恢复之前的 streak
+    state.punishments--;
+    state.totalCount--;
+  }
+  state.lastJudge = null;
+  dom.undoJudgeBtn.disabled = true;
+  // 更新显示
+  dom.streakValue.textContent = state.streak;
+  dom.punishValue.textContent = state.punishments;
+  dom.middleValue.textContent = state.totalCount;
+  showFeedback('已撤销上一次判定', 'correct', 800);
 }
 
 function resetScore() {
@@ -1406,8 +1526,9 @@ function resetScore() {
     });
   }
   state.streak = 0; state.maxStreak = 0; state.punishments = 0;
-  state.correctCount = 0; state.totalCount = 0;
+  state.correctCount = 0; state.totalCount = 0; state.lastJudge = null;
   dom.streakValue.textContent = '0'; dom.punishValue.textContent = '0'; dom.middleValue.textContent = '0';
+  dom.undoJudgeBtn.disabled = true;
   showFeedback('记分牌已重置', 'correct', 1000);
 }
 
@@ -1451,6 +1572,7 @@ function resetImportUI() {
   dom.fileInput.value = ''; dom.manualCount.textContent = '已添加 0 题';
   document.getElementById('mq').value = ''; document.getElementById('ma').value = '';
   document.getElementById('mb').value = ''; document.getElementById('mc').value = '';
+  document.getElementById('md').value = '';
   document.querySelector('input[name="manswer"][value="0"]').checked = true;
 }
 
@@ -1512,7 +1634,7 @@ function parseCSV(content) {
   const lines = content.trim().split('\n');
   if (lines.length < 2) throw new Error('CSV 文件至少需要表头和一行数据');
   const questions = [];
-  const answerMap = { 'A': 0, 'B': 1, 'C': 2, 'a': 0, 'b': 1, 'c': 2 };
+  const answerMap = { 'A': 0, 'B': 1, 'C': 2, 'D': 3, 'a': 0, 'b': 1, 'c': 2, 'd': 3 };
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
@@ -1520,9 +1642,14 @@ function parseCSV(content) {
     if (parts.length < 5) continue;
     const answerStr = parts[4].trim().toUpperCase();
     if (!(answerStr in answerMap)) continue;
+    // 支持3选项（5列）和4选项（6列）
+    const options = [parts[1].trim(), parts[2].trim(), parts[3].trim()];
+    if (parts.length >= 6 && parts[5].trim()) {
+      options.push(parts[5].trim());
+    }
     questions.push({
       q: parts[0].trim(),
-      options: [parts[1].trim(), parts[2].trim(), parts[3].trim()],
+      options: options,
       answer: answerMap[answerStr]
     });
   }
@@ -1535,16 +1662,16 @@ function validateQuestions(questions, title) {
   const valid = [];
   for (let i = 0; i < questions.length; i++) {
     const q = questions[i];
-    if (!q.q || !q.options || !Array.isArray(q.options) || q.options.length < 3) {
+    if (!q.q || !q.options || !Array.isArray(q.options) || q.options.length < 2) {
       console.warn(`题目 ${i + 1} 格式不完整，已跳过`);
       continue;
     }
-    const answer = typeof q.answer === 'string' ? { 'A': 0, 'B': 1, 'C': 2 }[q.answer.toUpperCase()] : q.answer;
-    if (answer < 0 || answer > 2) {
+    const answer = typeof q.answer === 'string' ? { 'A': 0, 'B': 1, 'C': 2, 'D': 3 }[q.answer.toUpperCase()] : q.answer;
+    if (answer < 0 || answer >= q.options.length) {
       console.warn(`题目 ${i + 1} 答案索引无效，已跳过`);
       continue;
     }
-    valid.push({ q: q.q, options: q.options.slice(0, 3), answer: answer });
+    valid.push({ q: q.q, options: q.options, answer: answer });
   }
   if (valid.length === 0) throw new Error('未找到有效题目');
   return valid;
@@ -1603,12 +1730,24 @@ dom.addQuestionBtn.addEventListener('click', () => {
   const a = document.getElementById('ma').value.trim();
   const b = document.getElementById('mb').value.trim();
   const c = document.getElementById('mc').value.trim();
+  const d = document.getElementById('md').value.trim();
   const answer = parseInt(document.querySelector('input[name="manswer"]:checked').value);
   if (!q || !a || !b || !c) { showFeedback('请填写完整题目和选项', 'wrong', 1000); return; }
-  manualQuestions.push({ q, options: [a, b, c], answer });
+  // 如果填写了选项 D，使用4个选项；否则使用3个
+  let options = [a, b, c];
+  if (d) {
+    options.push(d);
+    // 如果选了 D 但没填 D，不允许
+    if (answer === 3 && !d) { showFeedback('选项 D 未填写，不能选为正确答案', 'wrong', 1000); return; }
+  } else {
+    // 没填 D 但选了 D，不允许
+    if (answer === 3) { showFeedback('选项 D 未填写，不能选为正确答案', 'wrong', 1000); return; }
+  }
+  manualQuestions.push({ q, options, answer });
   dom.manualCount.textContent = `已添加 ${manualQuestions.length} 题`;
   document.getElementById('mq').value = ''; document.getElementById('ma').value = '';
   document.getElementById('mb').value = ''; document.getElementById('mc').value = '';
+  document.getElementById('md').value = '';
   document.querySelector('input[name="manswer"][value="0"]').checked = true;
   showFeedback('题目已添加', 'correct', 800);
 });
@@ -1706,6 +1845,15 @@ async function openHistoryModal() {
 
 function closeHistoryModal() { dom.historyModal.classList.remove('show'); }
 
+/* ==================== AI 生成题库指南模态框 ==================== */
+function openAiGuide() {
+  dom.aiGuideModal.classList.add('show');
+}
+
+function closeAiGuide() {
+  dom.aiGuideModal.classList.remove('show');
+}
+
 /* ==================== 暂停功能 ==================== */
 function pauseGame() {
   if (state.mode !== 'quiz' || state.isAnswered || state.isPaused) return;
@@ -1771,6 +1919,7 @@ function goHome() {
   state.mode = null;
   state.isPaused = false;
   state.isProcessing = false;
+  state.lastJudge = null;
   dom.pauseOverlay.classList.remove('show');
   dom.homeBtn.classList.remove('visible');
   dom.fullscreenBtn.classList.remove('home-visible');
@@ -1789,6 +1938,7 @@ dom.scoreModeBtn.addEventListener('click', startScoreMode);
 dom.restartBtn.addEventListener('click', () => startQuizMode(null, null));
 dom.judgeCorrectBtn.addEventListener('click', judgeCorrect);
 dom.judgeWrongBtn.addEventListener('click', judgeWrong);
+dom.undoJudgeBtn.addEventListener('click', undoJudge);
 dom.resetScoreBtn.addEventListener('click', resetScore);
 dom.pauseBtn.addEventListener('click', () => { state.isPaused ? resumeGame() : pauseGame(); });
 dom.resumeBtn.addEventListener('click', resumeGame);
@@ -1800,9 +1950,32 @@ dom.importClose.addEventListener('click', closeImportModal);
 dom.historyBtn.addEventListener('click', openHistoryModal);
 dom.historyClose.addEventListener('click', closeHistoryModal);
 
+// AI 指南按钮
+dom.aiGuideBtn.addEventListener('click', openAiGuide);
+dom.aiGuideClose.addEventListener('click', closeAiGuide);
+
+// 复制提示词
+dom.copyPromptBtn.addEventListener('click', () => {
+  const text = document.getElementById('aiPromptText').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    showFeedback('提示词已复制到剪贴板！', 'correct', 1500);
+    dom.copyPromptBtn.textContent = '✅ 已复制！';
+    setTimeout(() => { dom.copyPromptBtn.textContent = '📋 复制提示词'; }, 2000);
+  }).catch(() => {
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); showFeedback('提示词已复制到剪贴板！', 'correct', 1500); }
+    catch(e) { showFeedback('复制失败，请手动选择复制', 'wrong', 1500); }
+    document.body.removeChild(ta);
+  });
+});
+
 // 点击模态框背景关闭
 dom.importModal.addEventListener('click', e => { if (e.target === dom.importModal) closeImportModal(); });
 dom.historyModal.addEventListener('click', e => { if (e.target === dom.historyModal) closeHistoryModal(); });
+dom.aiGuideModal.addEventListener('click', e => { if (e.target === dom.aiGuideModal) closeAiGuide(); });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && state.mode === 'quiz' && !state.isAnswered && dom.startScreen.classList.contains('hidden') && !dom.modeSelectOverlay.classList.contains('show')) {
     state.isPaused ? resumeGame() : pauseGame();
