@@ -434,60 +434,174 @@ body.shaking { animation: shake 0.5s ease-in-out; }
 }
 
 /* ==================== 横屏适配 (landscape) ==================== */
+
+/* ---- 低高度横屏 (手机横屏，高度 < 500px) ---- */
 @media (orientation: landscape) and (max-height: 500px) {
-  html, body { overflow-y: auto; }
-  .game-container { gap: 4px; padding: 4px 12px; min-height: auto; overflow-y: visible; }
-  .game-title { padding: 2px 0; }
-  .game-title h1 { font-size: 0.9rem; letter-spacing: 1px; }
-  .game-title .subtitle { font-size: 0.55rem; }
-  .scoreboard { padding: 3px 10px; }
-  .score-item .label { font-size: 0.45rem; margin-bottom: 1px; }
-  .score-item .value { font-size: 0.9rem; }
-  .timer-section { display: block; margin-bottom: 2px; }
-  .timer-display { padding: 2px 10px; gap: 6px; }
-  .timer-icon { font-size: 0.8rem; }
-  .timer-value { font-size: 1rem; }
-  .question-section { margin-bottom: 2px; }
-  .question-number { font-size: 0.55rem; margin-bottom: 1px; }
-  .question-text { font-size: 0.75rem; min-height: 1em; line-height: 1.2; }
-  .options-section { flex-direction: row; gap: 4px; flex-wrap: wrap; }
-  .option-btn { padding: 4px 8px; font-size: 0.7rem; flex: 1; min-width: 80px; }
-  .option-btn .option-letter { width: 16px; height: 16px; line-height: 16px; margin-right: 4px; font-size: 0.65rem; }
-  .chair-section { padding: 2px 0; }
-  .chair-canvas { width: 60px; height: auto; }
-  .chair-glow { width: 80px; height: 80px; }
+  html, body { overflow-y: auto; height: auto; }
+
+  /* 游戏主界面 */
+  .game-container { gap: 3px; padding: 3px 10px; min-height: auto; overflow-y: visible; }
+  .game-title { padding: 1px 0; }
+  .game-title h1 { font-size: 0.85rem; letter-spacing: 1px; }
+  .game-title .subtitle { font-size: 0.5rem; }
+  .scoreboard { padding: 2px 8px; }
+  .score-item .label { font-size: 0.4rem; margin-bottom: 0; }
+  .score-item .value { font-size: 0.8rem; }
+  .timer-section { display: block; margin-bottom: 1px; }
+  .timer-display { padding: 1px 8px; gap: 4px; }
+  .timer-icon { font-size: 0.7rem; }
+  .timer-value { font-size: 0.85rem; }
+  .question-section { margin-bottom: 1px; }
+  .question-number { font-size: 0.5rem; margin-bottom: 0; }
+  .question-text { font-size: 0.7rem; min-height: 1em; line-height: 1.15; }
+  .options-section { flex-direction: row; gap: 3px; flex-wrap: wrap; }
+  .option-btn { padding: 3px 6px; font-size: 0.65rem; flex: 1; min-width: 70px; }
+  .option-btn .option-letter { width: 14px; height: 14px; line-height: 14px; margin-right: 3px; font-size: 0.6rem; }
+  .chair-section { padding: 1px 0; }
+  .chair-canvas { width: 50px; height: auto; }
+  .chair-glow { width: 70px; height: 70px; }
   .version-footer { display: none; }
-  .score-mode-buttons { gap: 4px; }
-  .score-judge-btn { padding: 6px 4px; font-size: 0.75rem; }
-  .score-mode-hint { font-size: 0.55rem; }
-  .reset-btn { padding: 3px 10px; font-size: 0.65rem; }
-  .fullscreen-btn, .pause-btn, .home-btn { padding: 2px 5px; font-size: 0.55rem; }
-  .feedback-popup { font-size: 0.9rem; }
-  .feedback-popup.wrong { font-size: 1rem; }
-  .screen-overlay { overflow-y: auto; justify-content: flex-start; padding-top: 40px; }
-  .mode-select-overlay { overflow-y: auto; justify-content: flex-start; padding-top: 40px; }
-  .modal-overlay { align-items: flex-start; padding-top: 20px; overflow-y: auto; }
-  .modal-box { max-height: 90vh; }
+  .score-mode-buttons { gap: 3px; }
+  .score-judge-btn { padding: 5px 3px; font-size: 0.7rem; }
+  .score-mode-hint { font-size: 0.5rem; }
+  .reset-btn { padding: 2px 8px; font-size: 0.6rem; }
+  .fullscreen-btn, .pause-btn, .home-btn { padding: 2px 4px; font-size: 0.5rem; }
+  .feedback-popup { font-size: 0.85rem; }
+  .feedback-popup.wrong { font-size: 0.95rem; }
+
+  /* 开始画面 / 结束画面 */
+  .screen-overlay {
+    overflow-y: auto;
+    justify-content: flex-start;
+    padding-top: 36px;
+    padding-bottom: 20px;
+    align-items: center;
+  }
+  .start-screen h2 { font-size: 1.2rem; margin-bottom: 4px; }
+  .start-screen p { font-size: 0.7rem; margin-bottom: 2px; line-height: 1.3; }
+  .mode-buttons { gap: 6px; margin-top: 6px; max-width: 280px; }
+  .mode-btn { padding: 6px 12px; font-size: 0.75rem; }
+  .mode-btn .mode-icon { font-size: 1.1em; margin-bottom: 1px; }
+  .mode-btn .mode-desc { font-size: 0.7em; margin-top: 1px; }
+  .start-links { margin-top: 6px; gap: 4px; max-width: 280px; }
+  .start-link-btn { padding: 4px 10px; font-size: 0.7rem; }
+  .end-screen h2 { font-size: 1.1rem; margin-bottom: 4px; }
+  .end-stats { margin-bottom: 6px; }
+  .end-stats p { font-size: 0.7rem; margin: 2px 0; }
+
+  /* 模式选择弹窗 */
+  .mode-select-overlay {
+    overflow-y: auto;
+    justify-content: flex-start;
+    padding-top: 36px;
+    padding-bottom: 20px;
+  }
+  .mode-select-overlay h3 { font-size: 1rem; margin-bottom: 2px; }
+  .mode-select-overlay .bank-name { font-size: 0.75rem; margin-bottom: 4px; }
+  .mode-select-overlay .mode-select-buttons { gap: 4px; max-width: 260px; }
+  .mode-select-overlay .mode-select-buttons button { padding: 5px 10px; font-size: 0.7rem; }
+  .timer-setting { margin: 4px 0; padding: 4px 8px; gap: 6px; }
+  .timer-setting label { font-size: 0.7rem; }
+  .timer-setting input[type="number"] { width: 45px; padding: 3px 4px; font-size: 0.75rem; }
+  .timer-setting span { font-size: 0.65rem; }
+
+  /* 模态框 */
+  .modal-overlay {
+    align-items: flex-start;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    overflow-y: auto;
+  }
+  .modal-box { max-height: 92vh; padding: 10px; }
+  .modal-title { font-size: 0.9rem; margin-bottom: 6px; }
+  .modal-tabs { gap: 2px; margin-bottom: 6px; flex-wrap: wrap; }
+  .modal-tab { padding: 4px; font-size: 0.65rem; }
+  .drop-zone { padding: 12px 8px; font-size: 0.7rem; }
+  .drop-zone .drop-icon { font-size: 1.2rem; }
+  .parse-preview { padding: 6px; font-size: 0.7rem; }
+  .manual-form input { padding: 4px 8px; font-size: 0.7rem; }
+  .manual-form .answer-options { gap: 6px; }
+  .manual-form .answer-options label { font-size: 0.7rem; }
+  .manual-form .answer-options input[type="radio"] { width: 14px; height: 14px; }
+  .manual-form .form-actions button,
+  .form-actions button { padding: 5px; font-size: 0.7rem; }
+  .manual-count { font-size: 0.65rem; }
+  #jsonPasteArea { min-height: 80px; padding: 6px; font-size: 0.7rem; }
+  .bank-item { padding: 6px; }
+  .bank-item .bank-title { font-size: 0.8rem; }
+  .bank-item .bank-meta { font-size: 0.65rem; }
+  .bank-item .bank-actions button { padding: 2px 6px; font-size: 0.65rem; }
+  .history-item { padding: 6px; }
+  .history-item .h-mode { font-size: 0.6rem; }
+  .history-item .h-title { font-size: 0.8rem; }
+  .history-item .h-stats { font-size: 0.65rem; }
+  .history-item .h-stats span { margin-right: 6px; }
+  .history-item .h-time { font-size: 0.6rem; }
+  .history-clear { margin-top: 6px; padding: 4px 12px; font-size: 0.7rem; }
 }
 
+/* ---- 中等高度横屏 (高度 501-700px) ---- */
 @media (orientation: landscape) and (min-height: 501px) and (max-height: 700px) {
-  html, body { overflow-y: auto; }
-  .game-container { gap: 8px; padding: 8px 16px; min-height: auto; overflow-y: visible; }
-  .game-title { padding: 4px 0; }
-  .game-title h1 { font-size: 1.2rem; }
-  .scoreboard { padding: 6px 14px; }
-  .score-item .value { font-size: 1.3rem; }
-  .timer-display { padding: 4px 14px; }
-  .timer-value { font-size: 1.3rem; }
-  .question-text { font-size: 1rem; }
-  .option-btn { padding: 8px 12px; font-size: 0.9rem; }
-  .chair-section { padding: 6px 0; }
-  .chair-canvas { width: 120px; height: auto; }
-  .chair-glow { width: 160px; height: 160px; }
-  .screen-overlay { overflow-y: auto; justify-content: flex-start; padding-top: 30px; }
-  .mode-select-overlay { overflow-y: auto; justify-content: flex-start; padding-top: 30px; }
-  .modal-overlay { align-items: flex-start; padding-top: 20px; overflow-y: auto; }
-  .modal-box { max-height: 85vh; }
+  html, body { overflow-y: auto; height: auto; }
+
+  /* 游戏主界面 */
+  .game-container { gap: 6px; padding: 6px 14px; min-height: auto; overflow-y: visible; }
+  .game-title { padding: 3px 0; }
+  .game-title h1 { font-size: 1.1rem; }
+  .game-title .subtitle { font-size: 0.6rem; }
+  .scoreboard { padding: 5px 12px; }
+  .score-item .value { font-size: 1.2rem; }
+  .timer-display { padding: 3px 12px; }
+  .timer-value { font-size: 1.2rem; }
+  .question-text { font-size: 0.95rem; }
+  .option-btn { padding: 7px 10px; font-size: 0.85rem; }
+  .chair-section { padding: 5px 0; }
+  .chair-canvas { width: 100px; height: auto; }
+  .chair-glow { width: 140px; height: 140px; }
+
+  /* 开始画面 / 结束画面 */
+  .screen-overlay {
+    overflow-y: auto;
+    justify-content: flex-start;
+    padding-top: 30px;
+    padding-bottom: 20px;
+  }
+  .start-screen h2 { font-size: 1.5rem; margin-bottom: 8px; }
+  .start-screen p { font-size: 0.85rem; margin-bottom: 4px; }
+  .mode-buttons { gap: 10px; margin-top: 12px; }
+  .mode-btn { padding: 10px 20px; font-size: 0.9rem; }
+  .start-links { margin-top: 10px; gap: 6px; }
+  .start-link-btn { padding: 6px 14px; font-size: 0.8rem; }
+  .end-screen h2 { font-size: 1.4rem; margin-bottom: 8px; }
+  .end-stats p { font-size: 0.85rem; }
+
+  /* 模式选择弹窗 */
+  .mode-select-overlay {
+    overflow-y: auto;
+    justify-content: flex-start;
+    padding-top: 30px;
+    padding-bottom: 20px;
+  }
+  .mode-select-overlay h3 { font-size: 1.2rem; }
+  .mode-select-overlay .bank-name { font-size: 0.9rem; margin-bottom: 10px; }
+  .mode-select-overlay .mode-select-buttons { gap: 8px; }
+  .mode-select-overlay .mode-select-buttons button { padding: 10px 18px; font-size: 0.9rem; }
+  .timer-setting { margin: 8px 0; padding: 6px 10px; }
+  .timer-setting label { font-size: 0.8rem; }
+  .timer-setting input[type="number"] { width: 50px; padding: 4px 6px; font-size: 0.85rem; }
+
+  /* 模态框 */
+  .modal-overlay {
+    align-items: flex-start;
+    padding-top: 15px;
+    padding-bottom: 15px;
+    overflow-y: auto;
+  }
+  .modal-box { max-height: 88vh; padding: 14px; }
+  .modal-tabs { gap: 3px; margin-bottom: 10px; }
+  .modal-tab { padding: 6px; font-size: 0.8rem; }
+  .drop-zone { padding: 20px 10px; }
+  #jsonPasteArea { min-height: 120px; }
 }
 
 /* ==================== 暂停遮罩 ==================== */
@@ -633,7 +747,7 @@ body.shaking { animation: shake 0.5s ease-in-out; }
   <div class="mode-buttons">
     <button class="mode-btn quiz-mode" id="quizModeBtn">
       <span class="mode-icon">📝 答题模式</span>
-      内置题库，限时15秒答题
+      内置题库，限时答题
       <span class="mode-desc">答错就要被"电"！连续答对3题有彩蛋</span>
     </button>
     <button class="mode-btn score-mode" id="scoreModeBtn">
