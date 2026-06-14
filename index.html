@@ -344,6 +344,8 @@ body.shaking { animation: shake 0.5s ease-in-out; }
   border-radius: 6px; outline: none;
 }
 .manual-form input:focus { border-color: var(--crt-green); }
+.manual-form input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.3); }
+textarea:focus { border-color: var(--crt-green) !important; }
 .manual-form .answer-options { display: flex; gap: 12px; align-items: center; }
 .manual-form .answer-options label { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 0.95rem; }
 .manual-form .answer-options input[type="radio"] { accent-color: var(--crt-green); width: 18px; height: 18px; }
@@ -471,6 +473,7 @@ body.shaking { animation: shake 0.5s ease-in-out; }
     <div class="modal-title">📎 导入自定义题库</div>
     <div class="modal-tabs">
       <button class="modal-tab active" data-tab="file">文件上传</button>
+      <button class="modal-tab" data-tab="paste">粘贴JSON</button>
       <button class="modal-tab" data-tab="manual">手动添加</button>
       <button class="modal-tab" data-tab="saved">已保存题库</button>
     </div>
@@ -487,6 +490,16 @@ body.shaking { animation: shake 0.5s ease-in-out; }
       <div class="form-actions" id="fileImportActions" style="display:none; margin-top:12px; display:none; gap:10px;">
         <button class="btn-cancel" id="fileCancelBtn" style="flex:1;padding:10px;font-family:var(--font-main);border:none;border-radius:6px;cursor:pointer;background:rgba(255,255,255,0.1);color:var(--text-white);">取消</button>
         <button class="btn-import-start" id="fileStartBtn" style="flex:1;padding:10px;font-family:var(--font-main);font-weight:600;border:none;border-radius:6px;cursor:pointer;background:var(--gold);color:var(--bg-dark);">导入并开始</button>
+      </div>
+    </div>
+
+    <!-- 粘贴JSON Tab -->
+    <div class="modal-tab-content" id="tabPaste">
+      <textarea id="jsonPasteArea" placeholder='将 JSON 内容粘贴到这里，例如：&#10;{&#10;  "title": "我的题库",&#10;  "questions": [&#10;    { "q": "1+1=?", "options": ["1","2","3"], "answer": 1 }&#10;  ]&#10;}' style="width:100%;min-height:180px;padding:12px;font-size:0.9rem;font-family:monospace,'Courier New',var(--font-main);color:var(--text-white);background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.2);border-radius:8px;resize:vertical;outline:none;line-height:1.5;"></textarea>
+      <div id="pastePreview"></div>
+      <div class="form-actions" style="margin-top:12px; display:flex; gap:10px;">
+        <button class="btn-cancel" id="pasteCancelBtn" style="flex:1;padding:10px;font-family:var(--font-main);border:none;border-radius:6px;cursor:pointer;background:rgba(255,255,255,0.1);color:var(--text-white);">取消</button>
+        <button class="btn-import-start" id="pasteStartBtn" style="flex:1;padding:10px;font-family:var(--font-main);font-weight:600;border:none;border-radius:6px;cursor:pointer;background:var(--gold);color:var(--bg-dark);">导入并开始</button>
       </div>
     </div>
 
@@ -1123,6 +1136,43 @@ dom.fileStartBtn.addEventListener('click', async () => {
 });
 
 dom.fileCancelBtn.addEventListener('click', () => { parsedQuestions = []; resetImportUI(); });
+
+// 粘贴 JSON 导入
+let pastedQuestions = [];
+const pastePreview = document.getElementById('pastePreview');
+
+function parsePastedJSON() {
+  const raw = document.getElementById('jsonPasteArea').value.trim();
+  if (!raw) {
+    pastePreview.innerHTML = '<div class="parse-preview error">请先粘贴 JSON 内容</div>';
+    pastedQuestions = [];
+    return;
+  }
+  try {
+    // 尝试提取 JSON（可能包含 ```json ... ``` 代码块包裹）
+    let jsonStr = raw;
+    const codeBlockMatch = raw.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+    if (codeBlockMatch) jsonStr = codeBlockMatch[1].trim();
+    pastedQuestions = parseJSON(jsonStr);
+    pastePreview.innerHTML = `<div class="parse-preview">✅ 解析成功！共 ${pastedQuestions.length} 道题目</div>`;
+  } catch (err) {
+    pastePreview.innerHTML = `<div class="parse-preview error">❌ ${err.message}</div>`;
+    pastedQuestions = [];
+  }
+}
+
+document.getElementById('pasteStartBtn').addEventListener('click', async () => {
+  parsePastedJSON();
+  if (pastedQuestions.length === 0) return;
+  await saveQuizBank('粘贴题库', pastedQuestions);
+  startQuizMode(pastedQuestions, '粘贴题库 (' + pastedQuestions.length + '题)');
+});
+
+document.getElementById('pasteCancelBtn').addEventListener('click', () => {
+  pastedQuestions = [];
+  document.getElementById('jsonPasteArea').value = '';
+  pastePreview.innerHTML = '';
+});
 
 // 手动添加
 dom.addQuestionBtn.addEventListener('click', () => {
