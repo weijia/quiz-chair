@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>逃学威龙 - 答题惩罚椅</title>
+<!-- ============================================================
+     逃学威龙 · 答题惩罚椅
+     复刻电影经典桥段的 Web 小游戏
+     ============================================================ -->
+<style>
+/* ==================== 全局重置 & 基础样式 ==================== */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --crt-green: #00ff41;
+  --crt-dark: #0a0a0a;
+  --gold: #ffd700;
+  --danger-red: #ff1a1a;
+  --electric-blue: #00bfff;
+  --bg-dark: #1a1a2e;
+  --bg-panel: #16213e;
+  --text-yellow: #ffe066;
+  --text-white: #f0f0f0;
+  --font-main: "STHeiti", "Heiti SC", "Microsoft YaHei", "PingFang SC", sans-serif;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+  font-family: var(--font-main);
+  background: var(--bg-dark);
+  color: var(--text-white);
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(0,255,65,0.03) 0%, transparent 60%),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,255,65,0.015) 2px,
+      rgba(0,255,65,0.015) 4px
+    );
+  background-attachment: fixed;
+}
+
+/* ==================== CRT 扫描线效果 ==================== */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0,0,0,0.15) 0px,
+    rgba(0,0,0,0.15) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  z-index: 9999;
+}
+
+/* ==================== 全屏震动动画 ==================== */
+@keyframes shake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  10% { transform: translate(-8px, -6px) rotate(-1deg); }
+  20% { transform: translate(8px, 4px) rotate(1deg); }
+  30% { transform: translate(-6px, 8px) rotate(-0.5deg); }
+  40% { transform: translate(6px, -8px) rotate(0.5deg); }
+  50% { transform: translate(-8px, 4px) rotate(-1deg); }
+  60% { transform: translate(8px, -4px) rotate(1deg); }
+  70% { transform: translate(-4px, 8px) rotate(-0.5deg); }
+  80% { transform: translate(4px, -6px) rotate(0.5deg); }
+  90% { transform: translate(-6px, -4px) rotate(-1deg); }
+}
+
+/* 手机端震动幅度稍小 */
+@media (max-width: 768px) {
+  @keyframes shake {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    10% { transform: translate(-4px, -3px) rotate(-0.5deg); }
+    20% { transform: translate(4px, 2px) rotate(0.5deg); }
+    30% { transform: translate(-3px, 4px) rotate(-0.3deg); }
+    40% { transform: translate(3px, -4px) rotate(0.3deg); }
+    50% { transform: translate(-4px, 2px) rotate(-0.5deg); }
+    60% { transform: translate(4px, -2px) rotate(0.5deg); }
+    70% { transform: translate(-2px, 4px) rotate(-0.3deg); }
+    80% { transform: translate(2px, -3px) rotate(0.3deg); }
+    90% { transform: translate(-3px, -2px) rotate(-0.5deg); }
+  }
+}
+
+body.shaking {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* ==================== 屏幕边缘泛红效果 ==================== */
+.screen-red-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 9998;
+  opacity: 0;
+  transition: opacity 0.15s;
+  box-shadow: inset 0 0 120px 40px rgba(255, 26, 26, 0.6);
+}
+
+.screen-red-overlay.active {
+  opacity: 1;
+}
+
+/* ==================== 主容器 ==================== */
+.game-container {
+  width: 100%;
+  max-width: 800px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  min-height: 100vh;
+}
+
+/* ==================== 标题区 ==================== */
+.game-title {
+  text-align: center;
+  padding: 16px 0 8px;
+}
+
+.game-title h1 {
+  font-size: clamp(1.6rem, 5vw, 2.4rem);
+  color: var(--crt-green);
+  text-shadow:
+    0 0 10px rgba(0,255,65,0.5),
+    0 0 20px rgba(0,255,65,0.3),
+    0 0 40px rgba(0,255,65,0.1);
+  letter-spacing: 4px;
+  font-weight: 900;
+}
+
+.game-title .subtitle {
+  font-size: clamp(0.75rem, 2.5vw, 0.95rem);
+  color: var(--text-yellow);
+  margin-top: 4px;
+  opacity: 0.8;
+}
+
+/* ==================== CRT 记分牌 ==================== */
+.scoreboard {
+  width: 100%;
+  background: var(--crt-dark);
+  border: 3px solid var(--crt-green);
+  border-radius: 8px;
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow:
+    0 0 15px rgba(0,255,65,0.2),
+    inset 0 0 30px rgba(0,255,65,0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+/* CRT 显示器内发光效果 */
+.scoreboard::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(ellipse at center, rgba(0,255,65,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.score-item {
+  text-align: center;
+  z-index: 1;
+}
+
+.score-item .label {
+  font-size: clamp(0.65rem, 2vw, 0.8rem);
+  color: rgba(0,255,65,0.7);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+
+.score-item .value {
+  font-size: clamp(1.8rem, 6vw, 2.8rem);
+  color: var(--crt-green);
+  font-weight: 900;
+  text-shadow: 0 0 10px rgba(0,255,65,0.6);
+  font-variant-numeric: tabular-nums;
+  transition: transform 0.2s, color 0.3s;
+}
+
+.score-item .value.pulse {
+  transform: scale(1.3);
+  color: var(--gold);
+}
+
+.score-item .value.danger-pulse {
+  transform: scale(1.3);
+  color: var(--danger-red);
+}
+
+/* ==================== 倒计时 - 炸弹风格 ==================== */
+.timer-section {
+  width: 100%;
+  text-align: center;
+}
+
+.timer-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: #0d0d0d;
+  border: 2px solid #333;
+  border-radius: 12px;
+  padding: 10px 28px;
+  box-shadow: inset 0 0 20px rgba(255,0,0,0.1);
+}
+
+.timer-icon {
+  font-size: clamp(1.2rem, 4vw, 1.6rem);
+  animation: bomb-pulse 1s ease-in-out infinite;
+}
+
+@keyframes bomb-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+.timer-value {
+  font-size: clamp(2rem, 8vw, 3.5rem);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: var(--danger-red);
+  text-shadow: 0 0 15px rgba(255,26,26,0.5);
+  min-width: 2ch;
+  text-align: center;
+  transition: color 0.3s;
+}
+
+.timer-value.urgent {
+  color: #ff0000;
+  animation: timer-flash 0.5s ease-in-out infinite;
+}
+
+@keyframes timer-flash {
+  0%, 100% { opacity: 1; text-shadow: 0 0 15px rgba(255,0,0,0.8); }
+  50% { opacity: 0.6; text-shadow: 0 0 30px rgba(255,0,0,1); }
+}
+
+/* ==================== 题目区 ==================== */
+.question-section {
+  width: 100%;
+  text-align: center;
+}
+
+.question-number {
+  font-size: clamp(0.7rem, 2vw, 0.85rem);
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 8px;
+}
+
+.question-text {
+  font-size: clamp(1.3rem, 4.5vw, 2rem);
+  font-weight: 700;
+  color: var(--text-white);
+  line-height: 1.5;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  min-height: 2em;
+}
+
+/* ==================== 选项按钮 ==================== */
+.options-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.option-btn {
+  width: 100%;
+  padding: 14px 20px;
+  font-size: clamp(1rem, 3.5vw, 1.3rem);
+  font-family: var(--font-main);
+  font-weight: 600;
+  color: var(--text-white);
+  background: linear-gradient(135deg, var(--bg-panel), #1a1a3e);
+  border: 2px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+}
+
+.option-btn:hover:not(:disabled) {
+  border-color: var(--electric-blue);
+  background: linear-gradient(135deg, #1a2a4e, #2a2a5e);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0,191,255,0.2);
+}
+
+.option-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.option-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.option-btn .option-letter {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  line-height: 32px;
+  text-align: center;
+  background: rgba(255,255,255,0.1);
+  border-radius: 6px;
+  margin-right: 12px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.option-btn.correct {
+  border-color: var(--crt-green);
+  background: linear-gradient(135deg, rgba(0,255,65,0.15), rgba(0,255,65,0.05));
+  box-shadow: 0 0 20px rgba(0,255,65,0.3);
+}
+
+.option-btn.wrong {
+  border-color: var(--danger-red);
+  background: linear-gradient(135deg, rgba(255,26,26,0.15), rgba(255,26,26,0.05));
+  box-shadow: 0 0 20px rgba(255,26,26,0.3);
+}
+
+/* ==================== 反馈文案弹出 ==================== */
+.feedback-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  z-index: 10000;
+  font-size: clamp(1.5rem, 6vw, 3rem);
+  font-weight: 900;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  text-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  white-space: nowrap;
+}
+
+.feedback-popup.show {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+}
+
+.feedback-popup.correct {
+  color: var(--gold);
+  text-shadow: 0 0 20px rgba(255,215,0,0.6), 0 4px 12px rgba(0,0,0,0.5);
+}
+
+.feedback-popup.wrong {
+  color: var(--danger-red);
+  text-shadow: 0 0 20px rgba(255,26,26,0.6), 0 4px 12px rgba(0,0,0,0.5);
+  font-size: clamp(1.8rem, 7vw, 3.5rem);
+}
+
+.feedback-popup.easter-egg {
+  color: #ff69b4;
+  text-shadow: 0 0 20px rgba(255,105,180,0.6), 0 4px 12px rgba(0,0,0,0.5);
+}
+
+/* ==================== 电椅区域 ==================== */
+.chair-section {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px 0;
+  position: relative;
+}
+
+.chair-canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* 椅子发光效果 */
+.chair-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.chair-glow.green {
+  background: radial-gradient(circle, rgba(0,255,65,0.3) 0%, transparent 70%);
+  opacity: 1;
+}
+
+.chair-glow.red {
+  background: radial-gradient(circle, rgba(255,26,26,0.4) 0%, transparent 70%);
+  opacity: 1;
+  animation: glow-pulse-red 0.3s ease-in-out 3;
+}
+
+@keyframes glow-pulse-red {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+  50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+}
+
+/* ==================== 闪电特效 (CSS) ==================== */
+.lightning-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 9997;
+  opacity: 0;
+  background:
+    linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.8) 30.5%, transparent 31%),
+    linear-gradient(-45deg, transparent 60%, rgba(255,255,255,0.6) 60.5%, transparent 61%);
+  background-size: 200% 200%;
+}
+
+.lightning-overlay.active {
+  animation: lightning-flash 0.15s ease-in-out 4;
+}
+
+@keyframes lightning-flash {
+  0% { opacity: 0; background-position: 0% 0%; }
+  25% { opacity: 0.8; background-position: 100% 100%; }
+  50% { opacity: 0; background-position: 50% 50%; }
+  75% { opacity: 0.6; background-position: 0% 100%; }
+  100% { opacity: 0; background-position: 100% 0%; }
+}
+
+/* ==================== 金色粒子特效容器 ==================== */
+.particles-container {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 9996;
+  overflow: hidden;
+}
+
+.particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 6px rgba(255,215,0,0.6);
+  animation: particle-fall 1.5s ease-in forwards;
+}
+
+@keyframes particle-fall {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(100vh) rotate(720deg) scale(0);
+  }
+}
+
+/* ==================== 开始/结束画面 ==================== */
+.screen-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.9);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 10001;
+  transition: opacity 0.5s;
+}
+
+.screen-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.start-screen h2 {
+  font-size: clamp(2rem, 7vw, 3.5rem);
+  color: var(--crt-green);
+  text-shadow: 0 0 20px rgba(0,255,65,0.5);
+  margin-bottom: 16px;
+}
+
+.start-screen p {
+  font-size: clamp(0.9rem, 3vw, 1.1rem);
+  color: var(--text-yellow);
+  margin-bottom: 8px;
+  max-width: 400px;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.start-btn {
+  margin-top: 24px;
+  padding: 14px 48px;
+  font-size: clamp(1.1rem, 4vw, 1.4rem);
+  font-family: var(--font-main);
+  font-weight: 700;
+  color: var(--bg-dark);
+  background: var(--crt-green);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 0 20px rgba(0,255,65,0.3);
+}
+
+.start-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px rgba(0,255,65,0.5);
+}
+
+.end-screen h2 {
+  font-size: clamp(1.8rem, 6vw, 3rem);
+  color: var(--gold);
+  text-shadow: 0 0 20px rgba(255,215,0,0.5);
+  margin-bottom: 16px;
+}
+
+.end-stats {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.end-stats p {
+  font-size: clamp(1rem, 3.5vw, 1.3rem);
+  margin: 8px 0;
+  color: var(--text-white);
+}
+
+.end-stats .stat-value {
+  color: var(--crt-green);
+  font-weight: 900;
+  font-size: 1.2em;
+}
+
+/* ==================== 版本信息 ==================== */
+.version-footer {
+  width: 100%;
+  text-align: center;
+  padding: 12px 0 20px;
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.3);
+}
+
+/* ==================== 响应式适配 ==================== */
+@media (max-width: 480px) {
+  .game-container {
+    padding: 10px;
+    gap: 14px;
+  }
+
+  .scoreboard {
+    padding: 12px 16px;
+  }
+
+  .timer-display {
+    padding: 8px 20px;
+  }
+
+  .option-btn {
+    padding: 12px 16px;
+  }
+
+  .option-btn .option-letter {
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    margin-right: 10px;
+  }
+}
+
+/* 电视大屏适配 */
+@media (min-width: 1920px) {
+  .game-container {
+    max-width: 1000px;
+  }
+
+  .game-title h1 {
+    font-size: 3rem;
+  }
+
+  .question-text {
+    font-size: 2.5rem;
+  }
+
+  .option-btn {
+    padding: 18px 24px;
+    font-size: 1.5rem;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- 屏幕边缘泛红遮罩 -->
+<div class="screen-red-overlay" id="screenRedOverlay"></div>
+
+<!-- 闪电特效遮罩 -->
+<div class="lightning-overlay" id="lightningOverlay"></div>
+
+<!-- 金色粒子容器 -->
+<div class="particles-container" id="particlesContainer"></div>
+
+<!-- 反馈文案弹出 -->
+<div class="feedback-popup" id="feedbackPopup"></div>
+
+<!-- ==================== 开始画面 ==================== -->
+<div class="screen-overlay start-screen" id="startScreen">
+  <h2>⚡ 答题惩罚椅 ⚡</h2>
+  <p>欢迎来到逃学威龙特别版！</p>
+  <p>答错题目就要被"电"哦！<br>每题限时 15 秒，超时也算答错！</p>
+  <p>连续答对 3 题有惊喜彩蛋 🎬</p>
+  <button class="start-btn" id="startBtn">开始挑战！</button>
+</div>
+
+<!-- ==================== 结束画面 ==================== -->
+<div class="screen-overlay end-screen hidden" id="endScreen">
+  <h2>🏁 挑战结束！🏁</h2>
+  <div class="end-stats" id="endStats"></div>
+  <button class="start-btn" id="restartBtn">再来一次！</button>
+</div>
+
+<!-- ==================== 主游戏界面 ==================== -->
+<div class="game-container" id="gameContainer">
+
+  <!-- 标题 -->
+  <div class="game-title">
+    <h1>逃学威龙 · 答题惩罚椅</h1>
+    <div class="subtitle">— 经典桥段复刻 —</div>
+  </div>
+
+  <!-- CRT 记分牌 -->
+  <div class="scoreboard">
+    <div class="score-item">
+      <div class="label">连对次数</div>
+      <div class="value" id="streakValue">0</div>
+    </div>
+    <div class="score-item">
+      <div class="label">当前题号</div>
+      <div class="value" id="questionNum">-</div>
+    </div>
+    <div class="score-item">
+      <div class="label">惩罚次数</div>
+      <div class="value" id="punishValue">0</div>
+    </div>
+  </div>
+
+  <!-- 倒计时 -->
+  <div class="timer-section">
+    <div class="timer-display">
+      <span class="timer-icon">💣</span>
+      <span class="timer-value" id="timerValue">15</span>
+    </div>
+  </div>
+
+  <!-- 题目 -->
+  <div class="question-section">
+    <div class="question-number" id="questionLabel">准备开始...</div>
+    <div class="question-text" id="questionText">按下"开始挑战"按钮</div>
+  </div>
+
+  <!-- 选项 -->
+  <div class="options-section" id="optionsSection">
+    <!-- 动态生成 -->
+  </div>
+
+  <!-- 电椅 -->
+  <div class="chair-section">
+    <div class="chair-glow" id="chairGlow"></div>
+    <canvas class="chair-canvas" id="chairCanvas" width="280" height="320"></canvas>
+  </div>
+
+  <!-- 版本信息 -->
+  <div class="version-footer" id="versionFooter">
+    <!-- 由 GitHub Actions 构建时注入版本号，本地开发显示 dev -->
+    版本: <span id="versionText">dev</span>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     音效说明：
+     由于浏览器安全策略，无法内嵌音频文件。
+     请将以下音效文件放在同目录下：
+       - correct.mp3  : 答对时的"叮"声
+       - wrong.mp3    : 答错时的电流"滋滋"声
+       - timeout.mp3  : 超时时的警报声
+     如果没有音频文件，将使用 Web Audio API 合成简易音效。
+     ============================================================ -->
+
+<script>
+/* ==================== 音效系统 ==================== */
+const AudioSystem = {
+  ctx: null,
+
+  /** 初始化 AudioContext（需要用户交互后才能创建） */
+  init() {
+    if (!this.ctx) {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  },
+
+  /**
+   * 尝试播放外部音频文件，失败则使用合成音效
+   * @param {string} filename - 音频文件名
+   * @param {string} fallback - 合成音效类型: 'correct' | 'wrong' | 'timeout'
+   */
+  playFile(filename, fallback) {
+    const audio = new Audio(filename);
+    audio.volume = 0.5;
+    audio.play().catch(() => {
+      // 文件不存在，使用合成音效
+      this.playSynth(fallback);
+    });
+  },
+
+  /** 使用 Web Audio API 合成音效 */
+  playSynth(type) {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+
+    if (type === 'correct') {
+      // 清脆的"叮"声 - 两个高频正弦波叠加
+      [880, 1318].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now + i * 0.1);
+        osc.stop(now + 0.6);
+      });
+    } else if (type === 'wrong') {
+      // 电流"滋滋"声 - 白噪音 + 低频锯齿波
+      const bufferSize = ctx.sampleRate * 0.8;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * 0.4;
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(3000, now);
+      filter.Q.setValueAtTime(1, now);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.5, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+
+      noise.connect(filter).connect(gain).connect(ctx.destination);
+      noise.start(now);
+      noise.stop(now + 0.8);
+
+      // 叠加低频锯齿波模拟电流
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(80, now);
+      osc.frequency.linearRampToValueAtTime(40, now + 0.8);
+      oscGain.gain.setValueAtTime(0.2, now);
+      oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+      osc.connect(oscGain).connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.8);
+    } else if (type === 'timeout') {
+      // 超时警报 - 下降音调
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(600, now);
+      osc.frequency.linearRampToValueAtTime(200, now + 0.6);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.6);
+    }
+  },
+
+  /** 播放答对音效 */
+  playCorrect() {
+    this.playFile('correct.mp3', 'correct');
+  },
+
+  /** 播放答错音效 */
+  playWrong() {
+    this.playFile('wrong.mp3', 'wrong');
+  },
+
+  /** 播放超时音效 */
+  playTimeout() {
+    this.playFile('timeout.mp3', 'timeout');
+  }
+};
+
+/* ==================== 题库 ==================== */
+const QUESTIONS = [
+  {
+    q: '1 + 1 = ?',
+    options: ['1', '2', '3'],
+    answer: 1 // 索引从0开始，正确答案是 '2'
+  },
+  {
+    q: '地球绕太阳转一圈需要多久？',
+    options: ['一个月', '一年', '一天'],
+    answer: 1
+  },
+  {
+    q: '水的化学式是什么？',
+    options: ['CO2', 'H2O', 'NaCl'],
+    answer: 1
+  },
+  {
+    q: '周星驰是哪国人？',
+    options: ['台湾', '中国大陆', '中国香港'],
+    answer: 2
+  },
+  {
+    q: '《逃学威龙》中，周星驰饰演的角色叫什么名字？',
+    options: ['张无忌', '周星星', '韦小宝'],
+    answer: 1
+  },
+  {
+    q: '一个三角形有几个角？',
+    options: ['2个', '3个', '4个'],
+    answer: 1
+  },
+  {
+    q: '太阳从哪个方向升起？',
+    options: ['西边', '南边', '东边'],
+    answer: 2
+  },
+  {
+    q: '一年有多少天？（平年）',
+    options: ['364天', '365天', '366天'],
+    answer: 1
+  },
+  {
+    q: '中国最长的河流是？',
+    options: ['黄河', '长江', '珠江'],
+    answer: 1
+  },
+  {
+    q: '"逃学威龙"是哪一年上映的？',
+    options: ['1991年', '1992年', '1993年'],
+    answer: 1
+  }
+];
+
+/* ==================== 游戏状态 ==================== */
+const state = {
+  currentQuestion: 0,    // 当前题目索引
+  streak: 0,            // 连对次数
+  punishments: 0,        // 惩罚次数
+  correctCount: 0,       // 总答对数
+  timer: null,           // 倒计时定时器
+  timeLeft: 15,          // 剩余时间
+  isAnswered: false,     // 当前题是否已回答
+  totalQuestions: QUESTIONS.length
+};
+
+/* ==================== DOM 元素引用 ==================== */
+const dom = {
+  startScreen: document.getElementById('startScreen'),
+  endScreen: document.getElementById('endScreen'),
+  endStats: document.getElementById('endStats'),
+  startBtn: document.getElementById('startBtn'),
+  restartBtn: document.getElementById('restartBtn'),
+  streakValue: document.getElementById('streakValue'),
+  questionNum: document.getElementById('questionNum'),
+  punishValue: document.getElementById('punishValue'),
+  timerValue: document.getElementById('timerValue'),
+  questionLabel: document.getElementById('questionLabel'),
+  questionText: document.getElementById('questionText'),
+  optionsSection: document.getElementById('optionsSection'),
+  chairCanvas: document.getElementById('chairCanvas'),
+  chairGlow: document.getElementById('chairGlow'),
+  screenRedOverlay: document.getElementById('screenRedOverlay'),
+  lightningOverlay: document.getElementById('lightningOverlay'),
+  particlesContainer: document.getElementById('particlesContainer'),
+  feedbackPopup: document.getElementById('feedbackPopup'),
+  versionText: document.getElementById('versionText')
+};
+
+/* ==================== 电椅绘制 ==================== */
+const chairCtx = dom.chairCanvas.getContext('2d');
+let chairColor = '#555'; // 默认灰色
+
+/**
+ * 绘制像素风格的电椅
+ * @param {string} color - 椅子主色调
+ * @param {boolean} electric - 是否显示电流效果
+ */
+function drawChair(color, electric) {
+  const ctx = chairCtx;
+  const w = dom.chairCanvas.width;
+  const h = dom.chairCanvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  // 椅子底座
+  ctx.fillStyle = '#333';
+  ctx.fillRect(40, h - 30, w - 80, 20);
+
+  // 椅子腿
+  ctx.fillStyle = color;
+  ctx.fillRect(60, h - 60, 16, 35);
+  ctx.fillRect(w - 76, h - 60, 16, 35);
+
+  // 椅子座面
+  ctx.fillStyle = color;
+  ctx.fillRect(50, h - 70, w - 100, 20);
+
+  // 椅背
+  ctx.fillRect(50, 40, 16, h - 110);
+  ctx.fillRect(w - 66, 40, 16, h - 110);
+
+  // 椅背横杆
+  ctx.fillRect(50, 50, w - 100, 12);
+  ctx.fillRect(50, 90, w - 100, 12);
+  ctx.fillRect(50, 130, w - 100, 12);
+
+  // 头部电极（两个圆球）
+  ctx.fillStyle = electric ? '#ff4444' : '#888';
+  ctx.beginPath();
+  ctx.arc(w / 2 - 30, 30, 14, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(w / 2 + 30, 30, 14, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 电极连接线
+  ctx.strokeStyle = electric ? '#ff6666' : '#666';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(w / 2 - 30, 44);
+  ctx.lineTo(w / 2 - 30, 50);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(w / 2 + 30, 44);
+  ctx.lineTo(w / 2 + 30, 50);
+  ctx.stroke();
+
+  // 手臂束缚带
+  ctx.fillStyle = '#aa4400';
+  ctx.fillRect(66, h - 160, 50, 10);
+  ctx.fillRect(w - 116, h - 160, 50, 10);
+
+  // 脚部束缚带
+  ctx.fillRect(66, h - 55, 50, 8);
+  ctx.fillRect(w - 116, h - 55, 50, 8);
+
+  // 电流效果
+  if (electric) {
+    ctx.strokeStyle = '#00bfff';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#00bfff';
+    ctx.shadowBlur = 10;
+
+    // 随机闪电
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      let x = w / 2 + (Math.random() - 0.5) * 120;
+      let y = 20;
+      ctx.moveTo(x, y);
+      for (let j = 0; j < 6; j++) {
+        x += (Math.random() - 0.5) * 40;
+        y += Math.random() * 40 + 10;
+        ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    ctx.shadowBlur = 0;
+  }
+
+  // "DANGER" 标签
+  ctx.fillStyle = electric ? '#ff0000' : '#666';
+  ctx.font = 'bold 10px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(electric ? '⚡ DANGER ⚡' : 'DANGER', w / 2, h - 8);
+}
+
+// 初始绘制
+drawChair(chairColor, false);
+
+/* ==================== 视觉特效函数 ==================== */
+
+/**
+ * 全屏震动
+ * @param {number} duration - 震动持续时间(ms)
+ */
+function triggerShake(duration = 500) {
+  document.body.classList.add('shaking');
+  setTimeout(() => {
+    document.body.classList.remove('shaking');
+  }, duration);
+}
+
+/** 屏幕边缘泛红 */
+function triggerScreenRed() {
+  dom.screenRedOverlay.classList.add('active');
+  setTimeout(() => {
+    dom.screenRedOverlay.classList.remove('active');
+  }, 800);
+}
+
+/** 闪电特效 */
+function triggerLightning() {
+  dom.lightningOverlay.classList.add('active');
+  setTimeout(() => {
+    dom.lightningOverlay.classList.remove('active');
+  }, 600);
+}
+
+/**
+ * 撒金色粒子
+ * @param {number} count - 粒子数量
+ */
+function spawnParticles(count = 30) {
+  const container = dom.particlesContainer;
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.top = -10 + 'px';
+    p.style.animationDelay = Math.random() * 0.5 + 's';
+    p.style.animationDuration = (1 + Math.random()) + 's';
+    // 随机大小
+    const size = 4 + Math.random() * 8;
+    p.style.width = size + 'px';
+    p.style.height = size + 'px';
+    container.appendChild(p);
+    // 动画结束后移除
+    setTimeout(() => p.remove(), 2500);
+  }
+}
+
+/**
+ * 显示反馈文案
+ * @param {string} text - 文案内容
+ * @param {string} type - 'correct' | 'wrong' | 'easter-egg'
+ * @param {number} duration - 显示时长(ms)
+ */
+function showFeedback(text, type, duration = 1500) {
+  const popup = dom.feedbackPopup;
+  popup.textContent = text;
+  popup.className = 'feedback-popup ' + type;
+  // 强制重绘后添加 show 类
+  void popup.offsetWidth;
+  popup.classList.add('show');
+  setTimeout(() => {
+    popup.classList.remove('show');
+  }, duration);
+}
+
+/** 椅子发绿光 */
+function chairGlowGreen() {
+  dom.chairGlow.className = 'chair-glow green';
+  chairColor = '#00cc33';
+  drawChair(chairColor, false);
+  setTimeout(() => {
+    dom.chairGlow.className = 'chair-glow';
+    chairColor = '#555';
+    drawChair(chairColor, false);
+  }, 1500);
+}
+
+/** 椅子变红+闪电 */
+function chairGlowRed() {
+  dom.chairGlow.className = 'chair-glow red';
+  chairColor = '#cc0000';
+  drawChair(chairColor, true);
+  setTimeout(() => {
+    dom.chairGlow.className = 'chair-glow';
+    chairColor = '#555';
+    drawChair(chairColor, false);
+  }, 1500);
+}
+
+/* ==================== 记分牌动画 ==================== */
+
+/** 连对次数 +1 动画 */
+function pulseStreak() {
+  const el = dom.streakValue;
+  el.classList.add('pulse');
+  setTimeout(() => el.classList.remove('pulse'), 300);
+}
+
+/** 惩罚次数 +1 动画 */
+function pulsePunish() {
+  const el = dom.punishValue;
+  el.classList.add('danger-pulse');
+  setTimeout(() => el.classList.remove('danger-pulse'), 300);
+}
+
+/* ==================== 倒计时系统 ==================== */
+
+function startTimer() {
+  state.timeLeft = 15;
+  dom.timerValue.textContent = state.timeLeft;
+  dom.timerValue.classList.remove('urgent');
+
+  state.timer = setInterval(() => {
+    state.timeLeft--;
+    dom.timerValue.textContent = Math.max(0, state.timeLeft);
+
+    // 最后5秒进入紧急模式
+    if (state.timeLeft <= 5 && state.timeLeft > 0) {
+      dom.timerValue.classList.add('urgent');
+    }
+
+    // 时间到
+    if (state.timeLeft <= 0) {
+      clearInterval(state.timer);
+      handleTimeout();
+    }
+  }, 1000);
+}
+
+function stopTimer() {
+  if (state.timer) {
+    clearInterval(state.timer);
+    state.timer = null;
+  }
+}
+
+/* ==================== 核心游戏逻辑 ==================== */
+
+/** 加载当前题目 */
+function loadQuestion() {
+  const q = QUESTIONS[state.currentQuestion];
+  dom.questionLabel.textContent = `第 ${state.currentQuestion + 1} / ${state.totalQuestions} 题`;
+  dom.questionNum.textContent = state.currentQuestion + 1;
+  dom.questionText.textContent = q.q;
+  state.isAnswered = false;
+
+  // 生成选项按钮
+  const letters = ['A', 'B', 'C'];
+  dom.optionsSection.innerHTML = '';
+
+  q.options.forEach((opt, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<span class="option-letter">${letters[idx]}</span>${opt}`;
+    btn.addEventListener('click', () => handleAnswer(idx));
+    dom.optionsSection.appendChild(btn);
+  });
+
+  // 启动倒计时
+  startTimer();
+}
+
+/**
+ * 处理用户选择
+ * @param {number} selectedIndex - 用户选择的选项索引
+ */
+function handleAnswer(selectedIndex) {
+  if (state.isAnswered) return;
+  state.isAnswered = true;
+  stopTimer();
+
+  const q = QUESTIONS[state.currentQuestion];
+  const buttons = dom.optionsSection.querySelectorAll('.option-btn');
+
+  // 禁用所有按钮
+  buttons.forEach(btn => btn.disabled = true);
+
+  if (selectedIndex === q.answer) {
+    handleCorrect(buttons);
+  } else {
+    handleWrong(buttons, selectedIndex);
+  }
+}
+
+/** 处理答对 */
+function handleCorrect(buttons) {
+  AudioSystem.playCorrect();
+
+  // 标记正确选项
+  buttons[QUESTIONS[state.currentQuestion].answer].classList.add('correct');
+
+  // 更新状态
+  state.streak++;
+  state.correctCount++;
+  dom.streakValue.textContent = state.streak;
+  pulseStreak();
+
+  // 视觉特效
+  chairGlowGreen();
+  spawnParticles(30);
+  showFeedback('回答正确！好犀利啊！', 'correct');
+
+  // 连击彩蛋检查
+  if (state.streak === 3) {
+    setTimeout(() => {
+      showFeedback('🎬 你系卧底？ 🎬', 'easter-egg', 2500);
+    }, 1600);
+  }
+
+  // 进入下一题
+  setTimeout(() => nextQuestion(), 2000);
+}
+
+/** 处理答错 */
+function handleWrong(buttons, selectedIndex) {
+  AudioSystem.playWrong();
+
+  // 标记选错和正确选项
+  buttons[selectedIndex].classList.add('wrong');
+  buttons[QUESTIONS[state.currentQuestion].answer].classList.add('correct');
+
+  // 更新状态
+  state.streak = 0;
+  state.punishments++;
+  dom.streakValue.textContent = state.streak;
+  dom.punishValue.textContent = state.punishments;
+  pulsePunish();
+
+  // 视觉特效 - 全套惩罚
+  triggerShake();
+  triggerScreenRed();
+  triggerLightning();
+  chairGlowRed();
+  showFeedback('回答错误！电佢！', 'wrong');
+
+  // 进入下一题
+  setTimeout(() => nextQuestion(), 2500);
+}
+
+/** 处理超时 */
+function handleTimeout() {
+  if (state.isAnswered) return;
+  state.isAnswered = true;
+
+  AudioSystem.playTimeout();
+
+  const buttons = dom.optionsSection.querySelectorAll('.option-btn');
+  buttons.forEach(btn => btn.disabled = true);
+  buttons[QUESTIONS[state.currentQuestion].answer].classList.add('correct');
+
+  // 更新状态
+  state.streak = 0;
+  state.punishments++;
+  dom.streakValue.textContent = state.streak;
+  dom.punishValue.textContent = state.punishments;
+  pulsePunish();
+
+  // 视觉特效
+  triggerShake();
+  triggerScreenRed();
+  triggerLightning();
+  chairGlowRed();
+  showFeedback('时间到！电佢！', 'wrong');
+
+  setTimeout(() => nextQuestion(), 2500);
+}
+
+/** 进入下一题或结束 */
+function nextQuestion() {
+  state.currentQuestion++;
+  if (state.currentQuestion >= state.totalQuestions) {
+    endGame();
+  } else {
+    loadQuestion();
+  }
+}
+
+/** 开始游戏 */
+function startGame() {
+  AudioSystem.init();
+
+  // 重置状态
+  state.currentQuestion = 0;
+  state.streak = 0;
+  state.punishments = 0;
+  state.correctCount = 0;
+  state.isAnswered = false;
+
+  dom.streakValue.textContent = '0';
+  dom.punishValue.textContent = '0';
+
+  // 隐藏开始/结束画面
+  dom.startScreen.classList.add('hidden');
+  dom.endScreen.classList.add('hidden');
+
+  // 加载第一题
+  loadQuestion();
+}
+
+/** 结束游戏 */
+function endGame() {
+  stopTimer();
+
+  // 计算结果
+  const accuracy = Math.round((state.correctCount / state.totalQuestions) * 100);
+  let grade = '😅 继续努力';
+  if (accuracy >= 90) grade = '🏆 超级卧底！';
+  else if (accuracy >= 70) grade = '👍 不错不错';
+  else if (accuracy >= 50) grade = '😐 勉勉强强';
+
+  dom.endStats.innerHTML = `
+    <p>总题数: <span class="stat-value">${state.totalQuestions}</span></p>
+    <p>答对: <span class="stat-value">${state.correctCount}</span></p>
+    <p>正确率: <span class="stat-value">${accuracy}%</span></p>
+    <p>被电次数: <span class="stat-value" style="color:var(--danger-red)">${state.punishments}</span></p>
+    <p style="margin-top:12px;font-size:1.3em">${grade}</p>
+  `;
+
+  dom.endScreen.classList.remove('hidden');
+}
+
+/* ==================== 事件绑定 ==================== */
+dom.startBtn.addEventListener('click', startGame);
+dom.restartBtn.addEventListener('click', startGame);
+
+/* ==================== 版本号显示 ==================== */
+// 如果由 GitHub Actions 构建，版本号会通过构建脚本注入到 window.__VERSION__
+// 本地开发时显示 "dev"
+(function setVersion() {
+  const versionEl = document.getElementById('versionText');
+  if (window.__VERSION__) {
+    versionEl.textContent = window.__VERSION__;
+  } else {
+    versionEl.textContent = 'dev';
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+name: "Auto Deploy"
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+jobs:
+  # ==================== Job 1: 构建并部署到 WebDAV ====================
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 需要完整历史来获取 tag 信息
+
+      # ========== 获取版本信息 ==========
+      - name: Get version info
+        id: version
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+          # 获取 tag 的创建时间
+          TAG_DATE=$(git log -1 --format=%ci $TAG 2>/dev/null || date -u +"%Y-%m-%d %H:%M:%S")
+          echo "build_time=$TAG_DATE" >> $GITHUB_OUTPUT
+
+          # 获取 commit SHA
+          echo "sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
+          echo "📦 Version: $TAG"
+          echo "🕐 Build Time: $TAG_DATE"
+          echo "🔨 Commit: ${GITHUB_SHA::7}"
+
+      # ========== 注入版本号到 index.html ==========
+      # 纯静态项目，直接在构建产物中注入版本信息
+      - name: Inject version into index.html
+        run: |
+          VERSION="${{ steps.version.outputs.tag }}"
+          BUILD_TIME="${{ steps.version.outputs.build_time }}"
+          COMMIT_SHA="${{ steps.version.outputs.sha }}"
+
+          # 将版本信息注入到 window.__VERSION__ 变量
+          VERSION_STRING="${VERSION} (${COMMIT_SHA}) | ${BUILD_TIME}"
+          sed -i "s|versionEl.textContent = 'dev';|versionEl.textContent = '${VERSION_STRING}';|" index.html
+
+          echo "✅ Version injected: ${VERSION_STRING}"
+
+      # ========== 部署到 WebDAV (版本目录 + latest) ==========
+      - name: Upload to WebDAV
+        uses: weijia/action-upload-webdav@v1.2.0
+        with:
+          webdav-url: ${{ secrets.WEBDAV_URL }}
+          webdav-username: ${{ secrets.WEBDAV_USERNAME }}
+          webdav-password: ${{ secrets.WEBDAV_PASSWORD }}
+          webdav-root: online/${{ github.event.repository.name }}
+          source-directory: ./
+          copy-to-latest: 'true'
+
+      # ========== 部署到 GitHub Pages ==========
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./
+
+  # ==================== Job 2: GitHub Pages 发布 ====================
+  deploy-pages:
+    needs: build-and-deploy
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
