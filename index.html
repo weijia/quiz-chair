@@ -930,6 +930,7 @@ const state = {
   timer: null, timeLeft: 25, isAnswered: false, isProcessing: false,
   isPaused: false,
   timerDuration: 25,         // 倒计时时长（秒），默认25，可配置
+  currentCorrectAnswer: 0,    // 当前题目打乱后的正确答案索引
   hideAnswer: false,          // 盲答模式：答错不显示正确答案
   questions: [...BUILT_IN_QUESTIONS], // 当前使用的题库
   quizBankTitle: '默认题库',           // 当前题库名称（用于历史记录）
@@ -1121,11 +1122,24 @@ function loadQuestion() {
   dom.questionLabel.textContent = `第 ${state.currentQuestion + 1} / ${state.totalQuestions} 题`;
   dom.middleValue.textContent = state.currentQuestion + 1;
   dom.questionText.textContent = q.q; state.isAnswered = false;
+
+  // 随机打乱选项顺序，避免记住答案位置
+  const indices = [0, 1, 2];
+  for (let i = indices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [indices[i], indices[j]] = [indices[j], indices[i]];
+  }
+  // 找到正确答案在新顺序中的位置
+  const shuffledOptions = indices.map(i => q.options[i]);
+  const newAnswer = indices.indexOf(q.answer);
+  state.currentCorrectAnswer = newAnswer;
+
   const letters = ['A', 'B', 'C']; dom.optionsSection.innerHTML = '';
-  q.options.forEach((opt, idx) => {
+  shuffledOptions.forEach((opt, idx) => {
     const btn = document.createElement('button'); btn.className = 'option-btn';
     btn.innerHTML = `<span class="option-letter">${letters[idx]}</span>${opt}`;
-    btn.addEventListener('click', () => handleAnswer(idx)); dom.optionsSection.appendChild(btn);
+    btn.addEventListener('click', () => handleAnswer(idx, newAnswer));
+    dom.optionsSection.appendChild(btn);
   });
   startTimer();
 }
@@ -1133,16 +1147,16 @@ function loadQuestion() {
 function handleAnswer(idx) {
   if (state.isAnswered || state.isProcessing) return;
   state.isAnswered = true; stopTimer();
-  const q = state.questions[state.currentQuestion];
   const btns = dom.optionsSection.querySelectorAll('.option-btn');
   btns.forEach(b => b.disabled = true);
-  if (idx === q.answer) {
-    btns[q.answer].classList.add('correct'); state.isProcessing = true;
+  const correctIdx = state.currentCorrectAnswer;
+  if (idx === correctIdx) {
+    btns[correctIdx].classList.add('correct'); state.isProcessing = true;
     triggerCorrectEffect();
     showNextButton();
   } else {
     btns[idx].classList.add('wrong');
-    if (!state.hideAnswer) btns[q.answer].classList.add('correct');
+    if (!state.hideAnswer) btns[correctIdx].classList.add('correct');
     state.isProcessing = true;
     triggerWrongEffect();
     showNextButton();
@@ -1154,7 +1168,7 @@ function handleTimeout() {
   state.isAnswered = true; AudioSystem.playTimeout();
   const btns = dom.optionsSection.querySelectorAll('.option-btn');
   btns.forEach(b => b.disabled = true);
-  if (!state.hideAnswer) btns[state.questions[state.currentQuestion].answer].classList.add('correct');
+  if (!state.hideAnswer) btns[state.currentCorrectAnswer].classList.add('correct');
   state.streak = 0; state.punishments++; state.totalCount++;
   dom.streakValue.textContent = state.streak; dom.punishValue.textContent = state.punishments; pulsePunish();
   triggerShake(); triggerScreenRed(); triggerLightning(); chairGlowRed();
