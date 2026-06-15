@@ -67,6 +67,11 @@ jobs:
           echo "✅ Version injected: ${VERSION_STRING}"
           echo "🕐 Build Time: ${BUILD_TIME}"
 
+      # ========== 清理不需要上传的文件 ==========
+      - name: Clean up files before upload
+        run: |
+          rm -rf .git .github
+
       # ========== 部署到 WebDAV ==========
       # action-upload-webdav 自动判断目录：
       #   有 tag → release/ 目录（覆盖式）
