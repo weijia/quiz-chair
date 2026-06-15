@@ -1519,6 +1519,8 @@ async function endGame() {
     totalQuestions: state.totalQuestions, correctCount: state.correctCount,
     punishments: state.punishments, maxStreak: state.maxStreak, accuracy: accuracy
   });
+  // 3秒后自动返回首页
+  setTimeout(goHome, 3000);
 }
 
 /* ==================== 记分模式 ==================== */
