@@ -1027,7 +1027,7 @@ body.shaking { animation: shake 0.5s ease-in-out; }
     <canvas class="chair-canvas" id="chairCanvas" width="280" height="320"></canvas>
   </div>
 
-  <div class="version-footer">版本: <span id="versionText">dev</span></div>
+  <div class="version-footer">版本: <span id="versionText">dev</span> <span id="buildTimeText"></span></div>
 </div>
 
 <script>
@@ -2021,6 +2021,11 @@ document.addEventListener('keydown', e => {
 (function setVersion() {
   const el = document.getElementById('versionText');
   el.textContent = window.__VERSION__ || 'dev';
+  const bt = document.getElementById('buildTimeText');
+  const buildTime = window.__BUILD_TIME__ || '';
+  if (buildTime) {
+    bt.textContent = ' | 构建: ' + buildTime;
+  }
 })();
 
 /* ==================== 初始化 PouchDB ==================== */

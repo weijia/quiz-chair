@@ -48,9 +48,12 @@ jobs:
           COMMIT_SHA="${{ steps.version.outputs.sha }}"
 
           # 将版本信息注入到 window.__VERSION__ 变量
-          VERSION_STRING="${VERSION} (${COMMIT_SHA}) | ${BUILD_TIME}"
+          VERSION_STRING="${VERSION} (${COMMIT_SHA})"
           # 使用 # 作为 sed 分隔符，避免与版本号中的特殊字符冲突
-          sed -i "s#versionEl.textContent = 'dev';#versionEl.textContent = '${VERSION_STRING}';#" index.html
+          sed -i "s#window.__VERSION__ || 'dev'#'${VERSION_STRING}'#" index.html
+
+          # 注入构建时间
+          sed -i "s#window.__BUILD_TIME__ || ''#'${BUILD_TIME}'#" index.html
 
           # 生成 version.json 供前端版本检测使用
           cat > version.json << EOF
@@ -58,6 +61,7 @@ jobs:
           EOF
 
           echo "✅ Version injected: ${VERSION_STRING}"
+          echo "🕐 Build Time: ${BUILD_TIME}"
 
       # ========== 部署到 WebDAV (版本目录 + latest) ==========
       - name: Upload to WebDAV
