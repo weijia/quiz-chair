@@ -2,6 +2,8 @@ name: "Auto Deploy"
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
 permissions:
@@ -19,24 +21,32 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 需要完整历史来获取 tag 信息
+          fetch-depth: 0
 
       # ========== 获取版本信息 ==========
       - name: Get version info
         id: version
         run: |
-          TAG=${GITHUB_REF#refs/tags/}
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          # 判断是否为 tag 触发
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            TAG=${GITHUB_REF#refs/tags/}
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            echo "is_tag=true" >> $GITHUB_OUTPUT
+            TAG_DATE=$(git log -1 --format=%ci $TAG 2>/dev/null || date -u +"%Y-%m-%d %H:%M:%S")
+            echo "build_time=$TAG_DATE" >> $GITHUB_OUTPUT
+            echo "📦 Version: $TAG (tagged)"
+          else
+            # 非 tag 触发，使用时间戳作为版本标识
+            TIMESTAMP=$(date -u +"%Y-%m-%dT%H-%M-%S")
+            SHORT_SHA=${GITHUB_SHA::7}
+            echo "tag=dev-${TIMESTAMP}" >> $GITHUB_OUTPUT
+            echo "is_tag=false" >> $GITHUB_OUTPUT
+            echo "build_time=$(date -u +"%Y-%m-%d %H:%M:%S")" >> $GITHUB_OUTPUT
+            echo "📦 Version: dev-${TIMESTAMP} (${SHORT_SHA})"
+          fi
 
-          # 获取 tag 的创建时间
-          TAG_DATE=$(git log -1 --format=%ci $TAG 2>/dev/null || date -u +"%Y-%m-%d %H:%M:%S")
-          echo "build_time=$TAG_DATE" >> $GITHUB_OUTPUT
-
-          # 获取 commit SHA
           echo "sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
-
-          echo "📦 Version: $TAG"
-          echo "🕐 Build Time: $TAG_DATE"
+          echo "🕐 Build Time: ${{ steps.version.outputs.build_time }}"
           echo "🔨 Commit: ${GITHUB_SHA::7}"
 
       # ========== 注入版本号到 index.html + 生成 version.json ==========
@@ -46,12 +56,10 @@ jobs:
           BUILD_TIME="${{ steps.version.outputs.build_time }}"
           COMMIT_SHA="${{ steps.version.outputs.sha }}"
 
-          # 将版本信息注入到 window.__VERSION__ 变量
           VERSION_STRING="${VERSION} (${COMMIT_SHA})"
           sed -i "/window\.__VERSION__ || 'dev'/c\  const ver = '${VERSION_STRING}';" index.html
           sed -i "/window\.__BUILD_TIME__ || ''/c\  const buildTime = '${BUILD_TIME}';" index.html
 
-          # 生成 version.json 供前端版本检测使用
           cat > version.json << EOF
           {"version":"${VERSION}","buildTime":"${BUILD_TIME}","sha":"${COMMIT_SHA}"}
           EOF
@@ -59,7 +67,11 @@ jobs:
           echo "✅ Version injected: ${VERSION_STRING}"
           echo "🕐 Build Time: ${BUILD_TIME}"
 
-      # ========== 部署到 WebDAV (release 目录 + latest) ==========
+      # ========== 部署到 WebDAV ==========
+      # action-upload-webdav 自动判断目录：
+      #   有 tag → release/ 目录（覆盖式）
+      #   无 tag → 时间戳目录（新建）
+      #   copy-to-latest → 同时复制到 latest/
       - name: Upload to WebDAV
         uses: weijia/action-upload-webdav@master
         with:
