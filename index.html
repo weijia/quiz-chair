@@ -411,7 +411,7 @@ body.shaking { animation: shake 0.5s ease-in-out; }
 .bank-empty { text-align: center; color: rgba(255,255,255,0.4); padding: 16px; font-size: 0.9rem; }
 
 /* 版本 */
-.version-footer { width: 100%; text-align: center; padding: 12px 0 20px; font-size: 0.75rem; color: rgba(255,255,255,0.3); }
+.version-footer { width: 100%; text-align: center; padding: 12px 0 20px; font-size: 0.75rem; color: rgba(255,255,255,0.55); }
 
 /* ==================== 响应式适配 ==================== */
 @media (max-width: 480px) {
@@ -461,7 +461,6 @@ body.shaking { animation: shake 0.5s ease-in-out; }
   .chair-section { padding: 1px 0; }
   .chair-canvas { width: 50px; height: auto; }
   .chair-glow { width: 70px; height: 70px; }
-  .version-footer { display: none; }
   .score-mode-buttons { gap: 3px; }
   .score-judge-btn { padding: 5px 3px; font-size: 0.7rem; }
   .score-mode-hint { font-size: 0.5rem; }
@@ -797,6 +796,7 @@ body.shaking { animation: shake 0.5s ease-in-out; }
     <button class="start-link-btn" id="historyBtn">📊 历史记录</button>
     <button class="start-link-btn" id="aiGuideBtn">🤖 AI 生成题库指南</button>
   </div>
+  <div class="version-footer" style="margin-top:24px;">版本: <span id="startVersionText">dev</span> <span id="startBuildTimeText"></span></div>
 </div>
 
 <!-- ==================== 结束画面 ==================== -->
@@ -834,6 +834,7 @@ body.shaking { animation: shake 0.5s ease-in-out; }
     <div class="modal-title">📎 导入自定义题库</div>
     <div class="modal-tabs">
       <button class="modal-tab active" data-tab="file">文件上传</button>
+      <button class="modal-tab" data-tab="url">URL导入</button>
       <button class="modal-tab" data-tab="paste">粘贴JSON</button>
       <button class="modal-tab" data-tab="manual">手动添加</button>
       <button class="modal-tab" data-tab="saved">已保存题库</button>
@@ -854,8 +855,21 @@ body.shaking { animation: shake 0.5s ease-in-out; }
       </div>
     </div>
 
+    <!-- URL导入 Tab -->
+    <div class="modal-tab-content" id="tabUrl">
+      <div style="margin-bottom:12px;font-size:0.85rem;color:var(--text-yellow);">输入在线题库 JSON 文件的 URL 地址</div>
+      <input type="url" id="urlInput" placeholder="https://example.com/quiz.json" style="width:100%;padding:10px 12px;font-size:0.9rem;font-family:var(--font-main);color:var(--text-white);background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.2);border-radius:8px;outline:none;box-sizing:border-box;">
+      <button class="btn-add-question" id="urlFetchBtn" style="margin-top:8px;">🔗 获取并解析</button>
+      <div id="urlPreview"></div>
+      <div class="form-actions" id="urlImportActions" style="display:none; margin-top:12px; gap:10px;">
+        <button class="btn-cancel" id="urlCancelBtn" style="flex:1;padding:10px;font-family:var(--font-main);border:none;border-radius:6px;cursor:pointer;background:rgba(255,255,255,0.1);color:var(--text-white);">取消</button>
+        <button class="btn-import-start" id="urlStartBtn" style="flex:1;padding:10px;font-family:var(--font-main);font-weight:600;border:none;border-radius:6px;cursor:pointer;background:var(--gold);color:var(--bg-dark);">导入并开始</button>
+      </div>
+    </div>
+
     <!-- 粘贴JSON Tab -->
     <div class="modal-tab-content" id="tabPaste">
+      <button class="btn-add-question" id="clipboardBtn" style="margin-bottom:8px;">📋 从剪贴板读取</button>
       <textarea id="jsonPasteArea" placeholder='将 JSON 内容粘贴到这里，例如：&#10;{&#10;  "title": "我的题库",&#10;  "questions": [&#10;    { "q": "1+1=?", "options": ["1","2","3","4"], "answer": 1 }&#10;  ]&#10;}' style="width:100%;min-height:180px;padding:12px;font-size:0.9rem;font-family:monospace,'Courier New',var(--font-main);color:var(--text-white);background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.2);border-radius:8px;resize:vertical;outline:none;line-height:1.5;"></textarea>
       <div id="pastePreview"></div>
       <div class="form-actions" style="margin-top:12px; display:flex; gap:10px;">
@@ -1256,6 +1270,15 @@ const dom = {
   aiGuideModal: document.getElementById('aiGuideModal'),
   aiGuideClose: document.getElementById('aiGuideClose'),
   copyPromptBtn: document.getElementById('copyPromptBtn'),
+  // URL导入
+  urlInput: document.getElementById('urlInput'),
+  urlFetchBtn: document.getElementById('urlFetchBtn'),
+  urlPreview: document.getElementById('urlPreview'),
+  urlImportActions: document.getElementById('urlImportActions'),
+  urlStartBtn: document.getElementById('urlStartBtn'),
+  urlCancelBtn: document.getElementById('urlCancelBtn'),
+  // 剪贴板
+  clipboardBtn: document.getElementById('clipboardBtn'),
 };
 
 /* ==================== 电椅绘制 ==================== */
@@ -1609,6 +1632,12 @@ function resetImportUI() {
   document.getElementById('mb').value = ''; document.getElementById('mc').value = '';
   document.getElementById('md').value = '';
   document.querySelector('input[name="manswer"][value="0"]').checked = true;
+  // 重置 URL 导入
+  dom.urlInput.value = ''; dom.urlPreview.innerHTML = '';
+  dom.urlImportActions.style.display = 'none'; urlFetchedQuestions = [];
+  // 重置粘贴
+  document.getElementById('jsonPasteArea').value = ''; pastedQuestions = [];
+  pastePreview.innerHTML = '';
 }
 
 // Tab 切换
@@ -1757,6 +1786,60 @@ document.getElementById('pasteCancelBtn').addEventListener('click', () => {
   pastedQuestions = [];
   document.getElementById('jsonPasteArea').value = '';
   pastePreview.innerHTML = '';
+});
+
+/* ==================== URL 导入 ==================== */
+let urlFetchedQuestions = [];
+
+dom.urlFetchBtn.addEventListener('click', async () => {
+  const url = dom.urlInput.value.trim();
+  if (!url) { dom.urlPreview.innerHTML = '<div class="parse-preview error">请输入 URL 地址</div>'; return; }
+  // 检查是否为合法的 URL
+  try { new URL(url); } catch(e) { dom.urlPreview.innerHTML = '<div class="parse-preview error">URL 格式不正确</div>'; return; }
+  dom.urlPreview.innerHTML = '<div class="parse-preview">正在获取...</div>';
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('请求失败: ' + resp.status + ' ' + resp.statusText);
+    const text = await resp.text();
+    urlFetchedQuestions = parseJSON(text);
+    dom.urlPreview.innerHTML = `<div class="parse-preview">✅ 获取成功！共 ${urlFetchedQuestions.length} 道题目</div>`;
+    dom.urlImportActions.style.display = 'flex';
+  } catch (err) {
+    dom.urlPreview.innerHTML = `<div class="parse-preview error">❌ ${err.message}</div>`;
+    urlFetchedQuestions = [];
+    dom.urlImportActions.style.display = 'none';
+  }
+});
+
+dom.urlStartBtn.addEventListener('click', async () => {
+  if (urlFetchedQuestions.length === 0) return;
+  const doc = await saveQuizBank('URL导入题库', urlFetchedQuestions);
+  closeImportModal();
+  openModeSelect(doc);
+});
+
+dom.urlCancelBtn.addEventListener('click', () => {
+  urlFetchedQuestions = [];
+  dom.urlInput.value = ''; dom.urlPreview.innerHTML = '';
+  dom.urlImportActions.style.display = 'none';
+});
+
+/* ==================== 剪贴板读取 ==================== */
+dom.clipboardBtn.addEventListener('click', async () => {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (!text.trim()) { showFeedback('剪贴板为空', 'wrong', 1000); return; }
+    document.getElementById('jsonPasteArea').value = text;
+    // 自动解析
+    parsePastedJSON();
+    showFeedback('已从剪贴板读取', 'correct', 800);
+  } catch (err) {
+    if (err.name === 'NotAllowedError' || err.message.includes('clipboard')) {
+      showFeedback('请手动粘贴（浏览器权限限制）', 'wrong', 1500);
+    } else {
+      showFeedback('读取剪贴板失败: ' + err.message, 'wrong', 1500);
+    }
+  }
 });
 
 // 手动添加
@@ -2019,13 +2102,17 @@ document.addEventListener('keydown', e => {
 
 /* ==================== 版本号 ==================== */
 (function setVersion() {
-  const el = document.getElementById('versionText');
-  el.textContent = window.__VERSION__ || 'dev';
-  const bt = document.getElementById('buildTimeText');
+  const ver = window.__VERSION__ || 'dev';
   const buildTime = window.__BUILD_TIME__ || '';
-  if (buildTime) {
-    bt.textContent = ' | 构建: ' + buildTime;
-  }
+  const btText = buildTime ? ' | 构建: ' + buildTime : '';
+  // 更新所有版本号显示
+  document.querySelectorAll('#versionText, #startVersionText').forEach(el => {
+    el.textContent = ver;
+  });
+  // 更新所有构建时间显示
+  document.querySelectorAll('#buildTimeText, #startBuildTimeText').forEach(el => {
+    el.textContent = btText;
+  });
 })();
 
 /* ==================== 初始化 PouchDB ==================== */
