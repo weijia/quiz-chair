@@ -52,22 +52,18 @@ jobs:
           echo "🕐 Build Time: ${{ steps.version.outputs.build_time }}"
           echo "🔨 Commit: ${GITHUB_SHA::7}"
 
-      # ========== 注入版本号到 index.html + 生成 version.json ==========
-      - name: Inject version into index.html
+      # ========== 生成 version.json ==========
+      - name: Generate version.json
         run: |
           VERSION="${{ steps.version.outputs.tag }}"
           BUILD_TIME="${{ steps.version.outputs.build_time }}"
           COMMIT_SHA="${{ steps.version.outputs.sha }}"
 
-          VERSION_STRING="${VERSION} (${COMMIT_SHA})"
-          sed -i "/window\.__VERSION__ || 'dev'/c\  const ver = '${VERSION_STRING}';" index.html
-          sed -i "/window\.__BUILD_TIME__ || ''/c\  const buildTime = '${BUILD_TIME}';" index.html
-
           cat > version.json << EOF
           {"version":"${VERSION}","buildTime":"${BUILD_TIME}","sha":"${COMMIT_SHA}"}
           EOF
 
-          echo "✅ Version injected: ${VERSION_STRING}"
+          echo "✅ Version: ${VERSION}"
           echo "🕐 Build Time: ${BUILD_TIME}"
 
       # ========== 清理不需要上传的文件 ==========

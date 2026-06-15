@@ -2104,17 +2104,26 @@ document.addEventListener('keydown', e => {
 
 /* ==================== 版本号 ==================== */
 (function setVersion() {
-  const ver = window.__VERSION__ || 'dev';
-  const buildTime = window.__BUILD_TIME__ || '';
-  const btText = buildTime ? ' | 构建: ' + buildTime : '';
-  // 更新所有版本号显示
-  document.querySelectorAll('#versionText, #startVersionText').forEach(el => {
-    el.textContent = ver;
-  });
-  // 更新所有构建时间显示
-  document.querySelectorAll('#buildTimeText, #startBuildTimeText').forEach(el => {
-    el.textContent = btText;
-  });
+  // 从 version.json 读取版本信息（支持本地部署和 GitHub Actions 部署）
+  fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+    .then(r => r.json())
+    .then(data => {
+      const ver = data.version || 'dev';
+      const buildTime = data.buildTime || '';
+      const btText = buildTime ? ' | 构建: ' + buildTime : '';
+      document.querySelectorAll('#versionText, #startVersionText').forEach(el => {
+        el.textContent = ver;
+      });
+      document.querySelectorAll('#buildTimeText, #startBuildTimeText').forEach(el => {
+        el.textContent = btText;
+      });
+    })
+    .catch(() => {
+      // 读取失败时保持默认 dev
+      document.querySelectorAll('#versionText, #startVersionText').forEach(el => {
+        el.textContent = 'dev';
+      });
+    });
 })();
 
 /* ==================== 初始化 PouchDB ==================== */
