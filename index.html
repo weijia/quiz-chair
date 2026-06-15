@@ -918,7 +918,8 @@ body.shaking { animation: shake 0.5s ease-in-out; }
         <li>AI 会返回 JSON 格式的题库</li>
         <li>复制 JSON 内容，回到本程序 → 导入自定义题库 → 粘贴JSON</li>
       </ol>
-      <p style="margin-bottom:8px;color:var(--crt-green);font-weight:700;">📋 提示词（点击复制）：</p>
+      <p style="margin-bottom:8px;color:var(--crt-green);font-weight:700;">📋 提示词：</p>
+      <button class="btn-import-start" id="copyPromptBtn" style="width:100%;padding:10px;font-family:var(--font-main);font-weight:600;border:none;border-radius:6px;cursor:pointer;background:var(--gold);color:var(--bg-dark);margin-bottom:12px;">📋 一键复制提示词</button>
       <div id="aiPromptText" style="background:rgba(0,255,65,0.05);border:1px solid rgba(0,255,65,0.2);border-radius:8px;padding:12px;font-size:0.8rem;line-height:1.6;white-space:pre-wrap;cursor:pointer;position:relative;margin-bottom:12px;" title="点击复制">你是一个专业的题库生成助手。请根据我提供的内容，生成一份答题游戏所需的 JSON 题库。
 
 我提供的内容可能是以下任意一种形式（照片或文字均可）：
@@ -955,7 +956,6 @@ body.shaking { animation: shake 0.5s ease-in-out; }
 
 以下是我提供的内容：
 [在此粘贴或描述你的材料]</div>
-      <button class="btn-import-start" id="copyPromptBtn" style="width:100%;padding:10px;font-family:var(--font-main);font-weight:600;border:none;border-radius:6px;cursor:pointer;background:var(--gold);color:var(--bg-dark);margin-bottom:16px;">📋 复制提示词</button>
       <p style="margin-bottom:8px;color:var(--crt-green);font-weight:700;">📄 JSON 格式示例：</p>
       <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:12px;font-size:0.8rem;font-family:monospace;line-height:1.5;white-space:pre-wrap;color:var(--text-yellow);">{
   "title": "数学测验",
