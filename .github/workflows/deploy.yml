@@ -40,7 +40,6 @@ jobs:
           echo "🔨 Commit: ${GITHUB_SHA::7}"
 
       # ========== 注入版本号到 index.html + 生成 version.json ==========
-      # 纯静态项目，直接在构建产物中注入版本信息
       - name: Inject version into index.html
         run: |
           VERSION="${{ steps.version.outputs.tag }}"
@@ -49,7 +48,6 @@ jobs:
 
           # 将版本信息注入到 window.__VERSION__ 变量
           VERSION_STRING="${VERSION} (${COMMIT_SHA})"
-          # 替换整行，更可靠
           sed -i "/window\.__VERSION__ || 'dev'/c\  const ver = '${VERSION_STRING}';" index.html
           sed -i "/window\.__BUILD_TIME__ || ''/c\  const buildTime = '${BUILD_TIME}';" index.html
 
@@ -61,9 +59,9 @@ jobs:
           echo "✅ Version injected: ${VERSION_STRING}"
           echo "🕐 Build Time: ${BUILD_TIME}"
 
-      # ========== 部署到 WebDAV (版本目录 + latest) ==========
+      # ========== 部署到 WebDAV (release 目录 + latest) ==========
       - name: Upload to WebDAV
-        uses: weijia/action-upload-webdav@v1.2.0
+        uses: weijia/action-upload-webdav@master
         with:
           webdav-url: ${{ secrets.WEBDAV_URL }}
           webdav-username: ${{ secrets.WEBDAV_USERNAME }}
