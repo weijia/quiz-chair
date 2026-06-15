@@ -711,6 +711,34 @@ body.shaking { animation: shake 0.5s ease-in-out; }
 .home-btn:hover { background: rgba(255,255,255,0.15); border-color: var(--crt-green); color: var(--crt-green); }
 .home-btn.visible { display: block; }
 .fullscreen-btn.home-visible { left: 12px; }
+
+/* 更新提示 Toast */
+.update-toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  z-index: 10005; display: flex; align-items: center; gap: 10px;
+  background: rgba(10,10,10,0.95); border: 1px solid var(--crt-green);
+  border-radius: 12px; padding: 10px 20px;
+  box-shadow: 0 0 20px rgba(0,255,65,0.2), 0 4px 12px rgba(0,0,0,0.5);
+  opacity: 0; pointer-events: none; transition: all 0.4s ease;
+  font-size: clamp(0.8rem, 2.5vw, 0.95rem); color: var(--text-white);
+}
+.update-toast.show { opacity: 1; pointer-events: auto; }
+.update-toast .toast-text { white-space: nowrap; }
+.update-toast .toast-refresh {
+  padding: 5px 14px; font-size: 0.85rem; font-family: var(--font-main); font-weight: 600;
+  color: var(--bg-dark); background: var(--crt-green); border: none;
+  border-radius: 6px; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+}
+.update-toast .toast-refresh:hover { box-shadow: 0 0 12px rgba(0,255,65,0.4); }
+.update-toast .toast-close {
+  padding: 5px 8px; font-size: 0.85rem; color: rgba(255,255,255,0.5);
+  background: none; border: none; cursor: pointer; transition: color 0.2s;
+}
+.update-toast .toast-close:hover { color: var(--text-white); }
+@media (orientation: landscape) and (max-height: 500px) {
+  .update-toast { bottom: 8px; padding: 6px 12px; gap: 6px; font-size: 0.7rem; }
+  .update-toast .toast-refresh { padding: 3px 10px; font-size: 0.7rem; }
+}
 </style>
 </head>
 <body>
@@ -720,6 +748,13 @@ body.shaking { animation: shake 0.5s ease-in-out; }
 <div class="lightning-overlay" id="lightningOverlay"></div>
 <div class="particles-container" id="particlesContainer"></div>
 <div class="feedback-popup" id="feedbackPopup"></div>
+
+<!-- 更新提示 -->
+<div class="update-toast" id="updateToast">
+  <span class="toast-text">🔄 发现新版本</span>
+  <button class="toast-refresh" id="updateRefreshBtn">立即刷新</button>
+  <button class="toast-close" id="updateCloseBtn">&times;</button>
+</div>
 
 <!-- 全屏按钮 -->
 <button class="fullscreen-btn" id="fullscreenBtn">⛶ 全屏</button>
@@ -1990,6 +2025,58 @@ document.addEventListener('keydown', e => {
 
 /* ==================== 初始化 PouchDB ==================== */
 initDB();
+
+/* ==================== 版本更新检测 ==================== */
+(function initUpdateCheck() {
+  const toast = document.getElementById('updateToast');
+  const refreshBtn = document.getElementById('updateRefreshBtn');
+  const closeBtn = document.getElementById('updateCloseBtn');
+  if (!toast || !refreshBtn || !closeBtn) return;
+
+  // 当前版本号（从 window.__VERSION__ 中提取 tag 部分）
+  const currentVersion = (window.__VERSION__ || 'dev').split(' ')[0];
+
+  // 显示更新提示
+  function showUpdateToast() {
+    toast.classList.add('show');
+  }
+  function hideUpdateToast() {
+    toast.classList.remove('show');
+  }
+
+  // 刷新页面
+  refreshBtn.addEventListener('click', () => {
+    window.location.reload();
+  });
+
+  // 关闭提示（本次会话不再显示）
+  closeBtn.addEventListener('click', () => {
+    hideUpdateToast();
+  });
+
+  // 检查 version.json 是否有新版本
+  async function checkForUpdate() {
+    try {
+      // 加时间戳避免缓存
+      const url = 'version.json?t=' + Date.now();
+      const resp = await fetch(url, { cache: 'no-store' });
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const newVersion = data.version;
+      if (newVersion && newVersion !== currentVersion && currentVersion !== 'dev') {
+        console.log('[Update] 新版本可用:', newVersion, '当前版本:', currentVersion);
+        showUpdateToast();
+      }
+    } catch (e) {
+      // 静默失败，不影响用户体验
+    }
+  }
+
+  // 页面加载 3 秒后首次检查
+  setTimeout(checkForUpdate, 3000);
+  // 每 5 分钟轮询一次
+  setInterval(checkForUpdate, 5 * 60 * 1000);
+})();
 </script>
 </body>
 </html>

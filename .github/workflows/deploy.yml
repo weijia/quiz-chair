@@ -39,7 +39,7 @@ jobs:
           echo "🕐 Build Time: $TAG_DATE"
           echo "🔨 Commit: ${GITHUB_SHA::7}"
 
-      # ========== 注入版本号到 index.html ==========
+      # ========== 注入版本号到 index.html + 生成 version.json ==========
       # 纯静态项目，直接在构建产物中注入版本信息
       - name: Inject version into index.html
         run: |
@@ -51,6 +51,11 @@ jobs:
           VERSION_STRING="${VERSION} (${COMMIT_SHA}) | ${BUILD_TIME}"
           # 使用 # 作为 sed 分隔符，避免与版本号中的特殊字符冲突
           sed -i "s#versionEl.textContent = 'dev';#versionEl.textContent = '${VERSION_STRING}';#" index.html
+
+          # 生成 version.json 供前端版本检测使用
+          cat > version.json << EOF
+          {"version":"${VERSION}","buildTime":"${BUILD_TIME}","sha":"${COMMIT_SHA}"}
+          EOF
 
           echo "✅ Version injected: ${VERSION_STRING}"
 
