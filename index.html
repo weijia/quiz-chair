@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>逃学威龙 - 答题惩罚椅</title>
 <!-- ============================================================
-     逃学威龙 · 答题惩罚椅  v1.6.0
+     逃学威龙 · 答题惩罚椅  v1.8.0
      复刻电影经典桥段的 Web 小游戏
      模式一：答题模式 - 内置/自定义题库，限时答题
      模式二：记分模式 - 自由判定对错，只做奖励/惩罚特效
@@ -895,6 +895,7 @@ body.shaking { animation: shake 0.5s ease-in-out; }
         </div>
         <button class="btn-add-question" id="addQuestionBtn">+ 添加此题</button>
         <div class="manual-count" id="manualCount">已添加 0 题</div>
+        <div id="manualShareLink"></div>
       </div>
       <div class="form-actions" style="margin-top:12px; display:flex; gap:10px;">
         <button class="btn-cancel" id="manualCancelBtn" style="flex:1;padding:10px;font-family:var(--font-main);border:none;border-radius:6px;cursor:pointer;background:rgba(255,255,255,0.1);color:var(--text-white);">取消</button>
@@ -948,15 +949,12 @@ body.shaking { animation: shake 0.5s ease-in-out; }
 如果是照片，请先通过 OCR 识别为文字后粘贴给我。
 
 生成要求：
-1. 每道题必须有4个选项（A/B/C/D）
-2. answer 是正确答案的索引（0=A, 1=B, 2=C, 3=D）
-3. 如果原题有超过4个选项，保留最合理的4个（必须包含正确答案）
-4. 如果原题不足4个选项，请补充合理的干扰项凑齐4个
-5. 如果原题没有选项，请根据知识点自行构造4个合理选项（1个正确+3个干扰项）
-6. 题目文字尽量简洁，适合在手机/电视屏幕上显示
-7. 尽量覆盖我提供的所有知识点，题目数量根据内容多少自行决定
+1. 每道题必须有4个选项
+2. 题目文字尽量简洁，适合在手机/电视屏幕上显示
+3. 尽量覆盖我提供的所有知识点，题目数量根据内容多少自行决定
+4. 支持两种格式（推荐格式2）：
 
-输出必须是以下 JSON 格式，不要输出其他多余内容：
+格式1 - 标准格式（选项固定）：
 {
   "title": "题库名称",
   "questions": [
@@ -967,6 +965,26 @@ body.shaking { animation: shake 0.5s ease-in-out; }
     }
   ]
 }
+
+格式2 - 随机格式（选项每次随机抽取，推荐）：
+{
+  "title": "题库名称",
+  "questions": [
+    {
+      "q": "题目内容",
+      "correct": ["正确答案1", "正确答案2"],
+      "wrong": ["错误答案1", "错误答案2", "错误答案3", "错误答案4"]
+    }
+  ]
+}
+
+格式2说明：
+- correct: 所有可能的正确答案（程序会随机抽1个）
+- wrong: 所有可能的错误答案（程序会随机抽3个）
+- 每次答题时选项顺序和正确答案都会变化，防止背答案
+- 请为每道题提供至少2个正确答案和至少4个错误答案
+
+输出必须是 JSON 格式，不要输出其他多余内容。
 
 [材料已作为附件上传，或粘贴在此处]</div>
       <p style="margin-bottom:8px;color:var(--crt-green);font-weight:700;">📄 JSON 格式示例：</p>
@@ -1045,7 +1063,7 @@ body.shaking { animation: shake 0.5s ease-in-out; }
 
 <script>
 /* ================================================================
-     逃学威龙 · 答题惩罚椅  v1.6.0
+     逃学威龙 · 答题惩罚椅  v1.8.0
      - PouchDB 持久化存储
      - 自定义题库导入（JSON / CSV / 手动）
      - 历史记录 + 再来一次
@@ -1396,46 +1414,73 @@ function stopTimer() { if (state.timer) { clearInterval(state.timer); state.time
 
 /* ==================== 答题模式 ==================== */
 function loadQuestion() {
-  const q = state.questions[state.currentQuestion];
-  dom.questionLabel.textContent = `第 ${state.currentQuestion + 1} / ${state.totalQuestions} 题`;
+  if (state.currentQuestion >= state.questions.length) { endGame(); return; }
+  const rawQ = state.questions[state.currentQuestion];
+  state.isAnswered = false;
+  state.isCorrect = false;
+  dom.questionText.textContent = rawQ.q;
+  dom.questionLabel.textContent = `第 ${state.currentQuestion + 1} 题 / 共 ${state.questions.length} 题`;
   dom.middleValue.textContent = state.currentQuestion + 1;
-  dom.questionText.textContent = q.q; state.isAnswered = false;
+  dom.optionsSection.innerHTML = '';
 
-  // 随机打乱选项顺序，避免记住答案位置（动态根据选项数量生成 indices）
-  const indices = Array.from({ length: q.options.length }, (_, i) => i);
+  let options, correctIndex;
+
+  // 新格式: 从 correct/wrong 中随机抽取
+  if (rawQ._format === 'new') {
+    // 随机选1个正确答案
+    const correctOption = rawQ.correct[Math.floor(Math.random() * rawQ.correct.length)];
+    // 从 wrong 中随机选3个干扰项
+    const shuffledWrong = shuffleArray([...rawQ.wrong]);
+    const wrongOptions = shuffledWrong.slice(0, 3);
+    // 组合并打乱
+    options = shuffleArray([correctOption, ...wrongOptions]);
+    correctIndex = options.indexOf(correctOption);
+  } else {
+    // 旧格式: 使用已有选项
+    options = rawQ.options;
+    correctIndex = rawQ.answer;
+  }
+
+  // 创建选项按钮（打乱顺序）
+  const numOptions = Math.min(options.length, 4); // 最多4个选项
+  const letters = ['A', 'B', 'C', 'D'].slice(0, numOptions);
+  const indices = Array.from({ length: numOptions }, (_, i) => i);
+  // Fisher-Yates 打乱
   for (let i = indices.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [indices[i], indices[j]] = [indices[j], indices[i]];
   }
-  // 找到正确答案在新顺序中的位置
-  const shuffledOptions = indices.map(i => q.options[i]);
-  const newAnswer = indices.indexOf(q.answer);
-  state.currentCorrectAnswer = newAnswer;
+  state.shuffledIndices = indices;
 
-  const letters = ['A', 'B', 'C', 'D', 'E', 'F'].slice(0, q.options.length);
-  dom.optionsSection.innerHTML = '';
-  shuffledOptions.forEach((opt, idx) => {
-    const btn = document.createElement('button'); btn.className = 'option-btn';
-    btn.innerHTML = `<span class="option-letter">${letters[idx]}</span>${opt}`;
-    btn.addEventListener('click', () => handleAnswer(idx, newAnswer));
+  letters.forEach((letter, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.textContent = letter + '. ' + options[indices[i]];
+    btn.dataset.index = indices[i];
+    btn.dataset.letter = letter;
+    btn.addEventListener('click', () => handleOptionClick(indices[i], btn));
     dom.optionsSection.appendChild(btn);
   });
+
+  state.correctIndex = correctIndex;
   startTimer();
 }
 
-function handleAnswer(idx) {
+function handleOptionClick(idx, btn) {
   if (state.isAnswered || state.isProcessing) return;
   state.isAnswered = true; stopTimer();
   const btns = dom.optionsSection.querySelectorAll('.option-btn');
   btns.forEach(b => b.disabled = true);
-  const correctIdx = state.currentCorrectAnswer;
+  const correctIdx = state.correctIndex;
   if (idx === correctIdx) {
-    btns[correctIdx].classList.add('correct'); state.isProcessing = true;
+    btn.classList.add('correct'); state.isProcessing = true;
     triggerCorrectEffect();
     showNextButton();
   } else {
-    btns[idx].classList.add('wrong');
-    if (!state.hideAnswer) btns[correctIdx].classList.add('correct');
+    btn.classList.add('wrong');
+    if (!state.hideAnswer) {
+      btns.forEach(b => { if (parseInt(b.dataset.index) === correctIdx) b.classList.add('correct'); });
+    }
     state.isProcessing = true;
     triggerWrongEffect();
     showNextButton();
@@ -1447,7 +1492,9 @@ function handleTimeout() {
   state.isAnswered = true; AudioSystem.playTimeout();
   const btns = dom.optionsSection.querySelectorAll('.option-btn');
   btns.forEach(b => b.disabled = true);
-  if (!state.hideAnswer) btns[state.currentCorrectAnswer].classList.add('correct');
+  if (!state.hideAnswer) {
+    btns.forEach(b => { if (parseInt(b.dataset.index) === state.correctIndex) b.classList.add('correct'); });
+  }
   state.streak = 0; state.punishments++; state.totalCount++;
   dom.streakValue.textContent = state.streak; dom.punishValue.textContent = state.punishments; pulsePunish();
   triggerShake(); triggerScreenRed(); triggerLightning(); chairGlowRed();
@@ -1481,7 +1528,10 @@ function nextQuestion() {
 
 function startQuizMode(questions, title, bankId, hideAnswer, duration) {
   AudioSystem.init();
-  state.mode = 'quiz'; state.questions = questions || [...BUILT_IN_QUESTIONS];
+  state.mode = 'quiz';
+  // 深拷贝并打乱题目顺序
+  questions = questions ? shuffleArray([...questions]) : [...BUILT_IN_QUESTIONS];
+  state.questions = questions;
   state.quizBankTitle = title || '默认题库';
   state.currentQuizBankId = bankId || null;
   state.hideAnswer = !!hideAnswer;
@@ -1594,9 +1644,22 @@ function resetScore() {
 /* ==================== 模式选择弹窗 ==================== */
 let pendingBank = null; // 等待选择模式的题库
 
-function openModeSelect(bank) {
-  pendingBank = bank;
-  dom.modeSelectBankName.textContent = bank.title + ' (' + bank.questionCount + '题)';
+function openModeSelect(docOrData) {
+  // 支持 PouchDB doc 或直接传入 {questions, title}
+  let questions, title, quizBankId;
+  if (docOrData._id) {
+    // PouchDB doc
+    questions = docOrData.questions;
+    title = docOrData.title;
+    quizBankId = docOrData._id;
+  } else {
+    // 直接传入 {questions, title}
+    questions = docOrData.questions;
+    title = docOrData.title;
+    quizBankId = null;
+  }
+  pendingBank = { questions, title, _id: quizBankId, questionCount: questions.length };
+  dom.modeSelectBankName.textContent = title + ' (' + questions.length + '题)';
   dom.modeSelectOverlay.classList.add('show');
 }
 
@@ -1677,6 +1740,8 @@ function handleFile(file) {
       }
       dom.parsePreview.innerHTML = `<div class="parse-preview">✅ 解析成功！共 ${parsedQuestions.length} 道题目</div>`;
       dom.fileImportActions.style.display = 'flex';
+      // 显示分享链接
+      showShareLink(dom.parsePreview, parsedQuestions, '导入题库');
     } catch (err) {
       dom.parsePreview.innerHTML = `<div class="parse-preview error">❌ ${err.message}</div>`;
       dom.fileImportActions.style.display = 'none';
@@ -1692,6 +1757,32 @@ function parseJSON(content) {
   const questions = data.questions || (Array.isArray(data) ? data : null);
   if (!questions || !Array.isArray(questions)) throw new Error('JSON 格式不正确：缺少 questions 数组');
   return validateQuestions(questions, data.title || '导入的题库');
+}
+
+/** 生成分享链接 */
+function generateShareLink(questions, title) {
+  const json = JSON.stringify({ title, questions });
+  const base64 = btoa(unescape(encodeURIComponent(json)));
+  const baseUrl = window.location.origin + window.location.pathname;
+  // 如果base64太长，用url方式（需要外部托管）
+  if (base64.length > 1500) {
+    return { type: 'url', message: '题目较多，请使用URL方式分享或托管到外部' };
+  }
+  return { type: 'data', url: baseUrl + '?data=' + encodeURIComponent(base64) };
+}
+
+function showShareLink(container, questions, title) {
+  const link = generateShareLink(questions, title);
+  if (link.type === 'data') {
+    container.innerHTML += `
+      <div style="margin-top:8px;padding:8px;background:rgba(0,255,65,0.05);border:1px solid rgba(0,255,65,0.2);border-radius:6px;font-size:0.8rem;">
+        <div style="color:var(--crt-green);margin-bottom:4px;">🔗 分享链接：</div>
+        <div style="word-break:break-all;color:var(--text-white);margin-bottom:6px;">${link.url}</div>
+        <button class="btn-add-question" onclick="navigator.clipboard.writeText('${link.url}').then(()=>{this.textContent='✅已复制';setTimeout(()=>this.textContent='📋复制链接',1500)}).catch(()=>{this.textContent='❌复制失败';setTimeout(()=>this.textContent='📋复制链接',1500)})">📋复制链接</button>
+      </div>`;
+  } else {
+    container.innerHTML += `<div style="margin-top:8px;padding:8px;background:rgba(255,200,0,0.05);border:1px solid rgba(255,200,0,0.2);border-radius:6px;font-size:0.8rem;color:var(--text-yellow);">⚠️ ${link.message}</div>`;
+  }
 }
 
 /** 解析 CSV 题库文件 */
@@ -1722,12 +1813,41 @@ function parseCSV(content) {
   return validateQuestions(questions, 'CSV导入题库');
 }
 
-/** 验证题目格式 */
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/** 验证题目格式，支持旧格式 {q, options, answer} 和新格式 {q, correct, wrong} */
 function validateQuestions(questions, title) {
   const valid = [];
   for (let i = 0; i < questions.length; i++) {
     const q = questions[i];
-    if (!q.q || !q.options || !Array.isArray(q.options) || q.options.length < 2) {
+    if (!q.q) {
+      console.warn(`题目 ${i + 1} 缺少题目内容，已跳过`);
+      continue;
+    }
+
+    // 新格式: {q, correct: [...], wrong: [...]}
+    if (q.correct && q.wrong && Array.isArray(q.correct) && Array.isArray(q.wrong)) {
+      if (q.correct.length === 0) {
+        console.warn(`题目 ${i + 1} correct 数组为空，已跳过`);
+        continue;
+      }
+      if (q.wrong.length < 3) {
+        console.warn(`题目 ${i + 1} wrong 选项不足3个，已跳过`);
+        continue;
+      }
+      valid.push({ q: q.q, correct: q.correct, wrong: q.wrong, _format: 'new' });
+      continue;
+    }
+
+    // 旧格式: {q, options, answer}
+    if (!q.options || !Array.isArray(q.options) || q.options.length < 2) {
       console.warn(`题目 ${i + 1} 格式不完整，已跳过`);
       continue;
     }
@@ -1769,6 +1889,7 @@ function parsePastedJSON() {
     if (codeBlockMatch) jsonStr = codeBlockMatch[1].trim();
     pastedQuestions = parseJSON(jsonStr);
     pastePreview.innerHTML = `<div class="parse-preview">✅ 解析成功！共 ${pastedQuestions.length} 道题目</div>`;
+    showShareLink(pastePreview, pastedQuestions, '粘贴题库');
   } catch (err) {
     pastePreview.innerHTML = `<div class="parse-preview error">❌ ${err.message}</div>`;
     pastedQuestions = [];
@@ -1805,6 +1926,14 @@ dom.urlFetchBtn.addEventListener('click', async () => {
     urlFetchedQuestions = parseJSON(text);
     dom.urlPreview.innerHTML = `<div class="parse-preview">✅ 获取成功！共 ${urlFetchedQuestions.length} 道题目</div>`;
     dom.urlImportActions.style.display = 'flex';
+    // 显示原始URL分享链接
+    const shareUrl = window.location.origin + window.location.pathname + '?url=' + encodeURIComponent(url);
+    dom.urlPreview.innerHTML += `
+      <div style="margin-top:8px;padding:8px;background:rgba(0,255,65,0.05);border:1px solid rgba(0,255,65,0.2);border-radius:6px;font-size:0.8rem;">
+        <div style="color:var(--crt-green);margin-bottom:4px;">🔗 分享链接（使用相同URL）：</div>
+        <div style="word-break:break-all;color:var(--text-white);margin-bottom:6px;">${shareUrl}</div>
+        <button class="btn-add-question" onclick="navigator.clipboard.writeText('${shareUrl}').then(()=>{this.textContent='✅已复制';setTimeout(()=>this.textContent='📋复制链接',1500)}).catch(()=>{this.textContent='❌复制失败';setTimeout(()=>this.textContent='📋复制链接',1500)})">📋复制链接</button>
+      </div>`;
   } catch (err) {
     dom.urlPreview.innerHTML = `<div class="parse-preview error">❌ ${err.message}</div>`;
     urlFetchedQuestions = [];
@@ -1869,6 +1998,7 @@ dom.addQuestionBtn.addEventListener('click', () => {
   document.getElementById('md').value = '';
   document.querySelector('input[name="manswer"][value="0"]').checked = true;
   showFeedback('题目已添加', 'correct', 800);
+  showShareLink(document.getElementById('manualShareLink'), manualQuestions, '手动题库');
 });
 
 dom.manualStartBtn.addEventListener('click', async () => {
@@ -2128,6 +2258,45 @@ document.addEventListener('keydown', e => {
 /* ==================== 初始化 PouchDB ==================== */
 initDB();
 
+/* ==================== URL参数自动加载 ==================== */
+(function initUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  const urlParam = params.get('url');
+  const dataParam = params.get('data');
+
+  async function loadFromUrl(url) {
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error('请求失败');
+      const text = await resp.text();
+      const questions = parseJSON(text);
+      // 直接弹出模式选择（不保存到PouchDB）
+      openModeSelect({ questions, title: 'URL题库' });
+    } catch (err) {
+      showFeedback('URL加载失败: ' + err.message, 'wrong', 3000);
+    }
+  }
+
+  async function loadFromData(base64) {
+    try {
+      const json = atob(base64);
+      const questions = parseJSON(json);
+      openModeSelect({ questions, title: '分享题库' });
+    } catch (err) {
+      showFeedback('数据解析失败', 'wrong', 3000);
+    }
+  }
+
+  if (urlParam) {
+    loadFromUrl(urlParam);
+    // 清理URL参数
+    window.history.replaceState({}, '', window.location.pathname);
+  } else if (dataParam) {
+    loadFromData(dataParam);
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+})();
+
 /* ==================== 版本更新检测 ==================== */
 (function initUpdateCheck() {
   const toast = document.getElementById('updateToast');
@@ -2135,8 +2304,13 @@ initDB();
   const closeBtn = document.getElementById('updateCloseBtn');
   if (!toast || !refreshBtn || !closeBtn) return;
 
-  // 当前版本号（从 window.__VERSION__ 中提取 tag 部分）
-  const currentVersion = (window.__VERSION__ || 'dev').split(' ')[0];
+  let currentVersion = 'dev';
+
+  // 从 version.json 读取当前版本
+  fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+    .then(r => r.json())
+    .then(data => { currentVersion = data.version || 'dev'; })
+    .catch(() => {});
 
   // 显示更新提示
   function showUpdateToast() {
