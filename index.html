@@ -1429,16 +1429,10 @@ function loadQuestion() {
   if (rawQ._format === 'new') {
     // 随机选1个作为"显示的正确答案"
     const correctOption = rawQ.correct[Math.floor(Math.random() * rawQ.correct.length)];
-    // 从 wrong 中随机选干扰项（最多3个）
+    // 从 wrong 中随机选干扰项
     const shuffledWrong = shuffleArray([...rawQ.wrong]);
-    const wrongOptions = shuffledWrong.slice(0, Math.min(3, shuffledWrong.length));
-    // 如果 wrong 不足3个，从 correct 剩余项中补充（这些也是正确答案但用户不知道）
-    const remainingCorrect = rawQ.correct.filter(c => c !== correctOption);
-    const shuffledRemaining = shuffleArray([...remainingCorrect]);
-    const fillerCount = 3 - wrongOptions.length;
-    const fillerOptions = shuffledRemaining.slice(0, Math.min(fillerCount, shuffledRemaining.length));
-    // 组合并打乱
-    options = shuffleArray([correctOption, ...wrongOptions, ...fillerOptions]);
+    // 组合并打乱（1个正确答案 + 实际有的wrong选项）
+    options = shuffleArray([correctOption, ...shuffledWrong]);
     correctIndex = options.indexOf(correctOption);
   } else {
     // 旧格式: 使用已有选项
