@@ -831,7 +831,7 @@ body.shaking { animation: shake 0.5s ease-in-out; }
 <div class="modal-overlay" id="importModal">
   <div class="modal-box">
     <button class="modal-close" id="importClose">&times;</button>
-    <div class="modal-title">📎 导入自定义题库 <a href="javascript:void(0)" id="importAiGuideLink" style="font-size:0.75rem;color:var(--crt-green);text-decoration:none;margin-left:8px;">🤖 不知道怎么生成？查看AI指南</a></div>
+    <div class="modal-title">📎 导入自定义题库</div>
     <div class="modal-tabs">
       <button class="modal-tab active" data-tab="file">文件上传</button>
       <button class="modal-tab" data-tab="url">URL导入</button>
@@ -906,6 +906,77 @@ body.shaking { animation: shake 0.5s ease-in-out; }
     <!-- 已保存题库 Tab -->
     <div class="modal-tab-content" id="tabSaved">
       <div class="bank-list" id="bankList"></div>
+    </div>
+
+    <!-- 可折叠 AI 指引 -->
+    <div style="border-top:1px solid rgba(255,255,255,0.1);margin-top:8px;padding-top:8px;">
+      <button id="aiGuideToggle" style="width:100%;padding:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:var(--text-yellow);font-size:0.85rem;cursor:pointer;font-family:var(--font-main);text-align:left;display:flex;justify-content:space-between;align-items:center;">
+        <span>🤖 AI 生成题库指南（不知道怎么生成JSON？点此查看）</span>
+        <span id="aiGuideArrow">▶</span>
+      </button>
+      <div id="aiGuideCollapse" style="display:none;margin-top:8px;max-height:300px;overflow-y:auto;">
+        <div style="font-size:0.85rem;color:var(--text-white);line-height:1.7;">
+          <p style="margin-bottom:8px;color:var(--text-yellow);">使用方法：</p>
+          <ol style="padding-left:18px;margin-bottom:12px;">
+            <li>复制下方提示词</li>
+            <li>发给 AI（ChatGPT / Claude / 通义千问等），附上你的材料</li>
+            <li>AI 返回 JSON 后，复制到上方「粘贴JSON」Tab 导入</li>
+          </ol>
+          <button class="btn-import-start" id="importCopyPromptBtn" style="width:100%;padding:8px;font-family:var(--font-main);font-weight:600;border:none;border-radius:6px;cursor:pointer;background:var(--gold);color:var(--bg-dark);margin-bottom:8px;font-size:0.85rem;">📋 一键复制提示词</button>
+          <div id="importAiPromptText" style="background:rgba(0,255,65,0.05);border:1px solid rgba(0,255,65,0.2);border-radius:8px;padding:10px;font-size:0.75rem;line-height:1.5;white-space:pre-wrap;cursor:pointer;" title="点击复制">你是一个专业的题库生成助手。请根据我提供的内容，生成一份答题游戏所需的 JSON 题库。
+
+我提供的内容可能是以下任意一种形式（照片或文字均可）：
+- 考试范围或知识点的描述
+- 教学大纲
+- 试卷
+- 考试题目
+- 学习笔记或复习资料
+- 课本章节内容
+- 其他任何与考试相关的材料
+
+如果是照片，请先通过 OCR 识别为文字后粘贴给我。
+
+生成要求：
+1. 每道题必须有4个选项
+2. 题目文字尽量简洁，适合在手机/电视屏幕上显示
+3. 尽量覆盖我提供的所有知识点，题目数量根据内容多少自行决定
+4. 支持两种格式（推荐格式2）：
+
+格式1 - 标准格式（选项固定）：
+{
+  "title": "题库名称",
+  "questions": [
+    {
+      "q": "题目内容",
+      "options": ["选项A", "选项B", "选项C", "选项D"],
+      "answer": 0
+    }
+  ]
+}
+
+格式2 - 随机格式（选项每次随机抽取，推荐）：
+{
+  "title": "题库名称",
+  "questions": [
+    {
+      "q": "题目内容",
+      "correct": ["正确答案1", "正确答案2"],
+      "wrong": ["错误答案1", "错误答案2", "错误答案3", "错误答案4"]
+    }
+  ]
+}
+
+格式2说明：
+- correct: 正确答案数组，至少1个（程序会随机抽1个作为显示答案）
+- wrong: 错误答案数组，至少1个（程序会使用所有wrong选项，不再额外补充）
+- 每次答题时选项顺序和正确答案都会变化，防止背答案
+- 建议每道题提供1-3个正确答案和2-4个错误答案，总选项数2-5个均可
+
+输出必须是 JSON 格式，不要输出其他多余内容。
+
+[材料已作为附件上传，或粘贴在此处]</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -2200,7 +2271,28 @@ dom.historyClose.addEventListener('click', closeHistoryModal);
 
 // AI 指南按钮
 dom.aiGuideBtn.addEventListener('click', openAiGuide);
-document.getElementById('importAiGuideLink').addEventListener('click', () => { closeImportModal(); setTimeout(openAiGuide, 300); });
+// 导入模态框内可折叠 AI 指引
+document.getElementById('aiGuideToggle').addEventListener('click', () => {
+  const collapse = document.getElementById('aiGuideCollapse');
+  const arrow = document.getElementById('aiGuideArrow');
+  const isOpen = collapse.style.display !== 'none';
+  collapse.style.display = isOpen ? 'none' : 'block';
+  arrow.textContent = isOpen ? '▶' : '▼';
+});
+document.getElementById('importCopyPromptBtn').addEventListener('click', () => {
+  const text = document.getElementById('importAiPromptText').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    showFeedback('提示词已复制！', 'correct', 1500);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); showFeedback('提示词已复制！', 'correct', 1500); }
+    catch(e) { showFeedback('复制失败，请手动选择复制', 'wrong', 1500); }
+    document.body.removeChild(ta);
+  });
+});
+document.getElementById('importAiGuideLink')?.addEventListener('click', () => { closeImportModal(); setTimeout(openAiGuide, 300); });
 dom.aiGuideClose.addEventListener('click', closeAiGuide);
 
 // 复制提示词
