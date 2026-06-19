@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>逃学威龙 - 答题惩罚椅</title>
+<title>百变星君 - 智能考试椅</title>
 <!-- ============================================================
-     逃学威龙 · 答题惩罚椅  v1.8.0
+     百变星君 · 智能考试椅  v1.8.0
      复刻电影经典桥段的 Web 小游戏
      模式一：答题模式 - 内置/自定义题库，限时答题
      模式二：记分模式 - 自由判定对错，只做奖励/惩罚特效
@@ -776,8 +776,8 @@ body.shaking { animation: shake 0.5s ease-in-out; }
 
 <!-- ==================== 开始画面 ==================== -->
 <div class="screen-overlay start-screen" id="startScreen">
-  <h2>⚡ 答题惩罚椅 ⚡</h2>
-  <p>欢迎来到逃学威龙特别版！</p>
+  <h2>⚡ 智能考试椅 ⚡</h2>
+  <p>欢迎来到百变星君特别版！</p>
   <p>选择一个模式开始挑战</p>
   <div class="mode-buttons">
     <button class="mode-btn quiz-mode" id="quizModeBtn">
@@ -1010,7 +1010,7 @@ body.shaking { animation: shake 0.5s ease-in-out; }
 <!-- ==================== 主游戏界面 ==================== -->
 <div class="game-container" id="gameContainer">
   <div class="game-title">
-    <h1>逃学威龙 · 答题惩罚椅</h1>
+    <h1>百变星君 · 智能考试椅</h1>
     <div class="subtitle" id="modeSubtitle">— 经典桥段复刻 —</div>
   </div>
 
@@ -1063,7 +1063,7 @@ body.shaking { animation: shake 0.5s ease-in-out; }
 
 <script>
 /* ================================================================
-     逃学威龙 · 答题惩罚椅  v1.8.0
+     百变星君 · 智能考试椅  v1.8.0
      - PouchDB 持久化存储
      - 自定义题库导入（JSON / CSV / 手动）
      - 历史记录 + 再来一次
@@ -1194,12 +1194,12 @@ const BUILT_IN_QUESTIONS = [
   { q: '地球绕太阳转一圈需要多久？', options: ['一个月', '一年', '一天'], answer: 1 },
   { q: '水的化学式是什么？', options: ['CO2', 'H2O', 'NaCl'], answer: 1 },
   { q: '周星驰是哪国人？', options: ['台湾', '中国大陆', '中国香港'], answer: 2 },
-  { q: '《逃学威龙》中，周星驰饰演的角色叫什么名字？', options: ['张无忌', '周星星', '韦小宝'], answer: 1 },
+  { q: '《百变星君》中，周星驰饰演的角色叫什么名字？', options: ['张无忌', '李泽星', '韦小宝'], answer: 1 },
   { q: '一个三角形有几个角？', options: ['2个', '3个', '4个'], answer: 1 },
   { q: '太阳从哪个方向升起？', options: ['西边', '南边', '东边'], answer: 2 },
   { q: '一年有多少天？（平年）', options: ['364天', '365天', '366天'], answer: 1 },
   { q: '中国最长的河流是？', options: ['黄河', '长江', '珠江'], answer: 1 },
-  { q: '"逃学威龙"是哪一年上映的？', options: ['1991年', '1992年', '1993年'], answer: 1 }
+  { q: '"百变星君"是哪一年上映的？', options: ['1994年', '1995年', '1996年'], answer: 1 }
 ];
 
 /* ==================== 游戏状态 ==================== */
