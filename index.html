@@ -831,7 +831,7 @@ body.shaking { animation: shake 0.5s ease-in-out; }
 <div class="modal-overlay" id="importModal">
   <div class="modal-box">
     <button class="modal-close" id="importClose">&times;</button>
-    <div class="modal-title">📎 导入自定义题库</div>
+    <div class="modal-title">📎 导入自定义题库 <a href="javascript:void(0)" id="importAiGuideLink" style="font-size:0.75rem;color:var(--crt-green);text-decoration:none;margin-left:8px;">🤖 不知道怎么生成？查看AI指南</a></div>
     <div class="modal-tabs">
       <button class="modal-tab active" data-tab="file">文件上传</button>
       <button class="modal-tab" data-tab="url">URL导入</button>
@@ -2200,6 +2200,7 @@ dom.historyClose.addEventListener('click', closeHistoryModal);
 
 // AI 指南按钮
 dom.aiGuideBtn.addEventListener('click', openAiGuide);
+document.getElementById('importAiGuideLink').addEventListener('click', () => { closeImportModal(); setTimeout(openAiGuide, 300); });
 dom.aiGuideClose.addEventListener('click', closeAiGuide);
 
 // 复制提示词
