@@ -1427,13 +1427,18 @@ function loadQuestion() {
 
   // 新格式: 从 correct/wrong 中随机抽取
   if (rawQ._format === 'new') {
-    // 随机选1个正确答案
+    // 随机选1个作为"显示的正确答案"
     const correctOption = rawQ.correct[Math.floor(Math.random() * rawQ.correct.length)];
-    // 从 wrong 中随机选3个干扰项
+    // 从 wrong 中随机选干扰项（最多3个）
     const shuffledWrong = shuffleArray([...rawQ.wrong]);
-    const wrongOptions = shuffledWrong.slice(0, 3);
+    const wrongOptions = shuffledWrong.slice(0, Math.min(3, shuffledWrong.length));
+    // 如果 wrong 不足3个，从 correct 剩余项中补充（这些也是正确答案但用户不知道）
+    const remainingCorrect = rawQ.correct.filter(c => c !== correctOption);
+    const shuffledRemaining = shuffleArray([...remainingCorrect]);
+    const fillerCount = 3 - wrongOptions.length;
+    const fillerOptions = shuffledRemaining.slice(0, Math.min(fillerCount, shuffledRemaining.length));
     // 组合并打乱
-    options = shuffleArray([correctOption, ...wrongOptions]);
+    options = shuffleArray([correctOption, ...wrongOptions, ...fillerOptions]);
     correctIndex = options.indexOf(correctOption);
   } else {
     // 旧格式: 使用已有选项
@@ -1838,8 +1843,8 @@ function validateQuestions(questions, title) {
         console.warn(`题目 ${i + 1} correct 数组为空，已跳过`);
         continue;
       }
-      if (q.wrong.length < 3) {
-        console.warn(`题目 ${i + 1} wrong 选项不足3个，已跳过`);
+      if (q.wrong.length === 0) {
+        console.warn(`题目 ${i + 1} wrong 数组为空，已跳过`);
         continue;
       }
       valid.push({ q: q.q, correct: q.correct, wrong: q.wrong, _format: 'new' });
